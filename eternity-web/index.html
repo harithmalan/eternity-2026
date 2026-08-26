@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ETERNITY · 18 September 2026 · Free entry</title>
+    <meta name="description" content="ETERNITY — SCU Get Together 2026. SLIIT City Uni's 25th anniversary, 18 September 2026, Colombo. Free entry — we sell merch only." />
+
+    <!-- Open Graph / Twitter — og:url and the image's absolute host need the
+         real production domain filled in at deploy time; left root-relative
+         until then. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Eternity — SCU Get Together 2026" />
+    <meta property="og:title" content="ETERNITY · 18 September 2026 · Free entry" />
+    <meta property="og:description" content="SLIIT City Uni's 25th anniversary. 18 September 2026, Colombo. Free entry — we sell merch only." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ETERNITY · 18 September 2026 · Free entry" />
+    <meta name="twitter:description" content="SLIIT City Uni's 25th anniversary. 18 September 2026, Colombo. Free entry — we sell merch only." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- The wordmark is the largest element in the hero and the page's LCP
+         candidate — preload it so it isn't waiting behind the font/JS chain. -->
+    <link rel="preload" as="image" href="/img/eternity-logo.png" fetchpriority="high" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Sora:wght@200;300;400;600&family=Chivo+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
