@@ -121,15 +121,6 @@ export type OrderItem = {
   line_total: number;
 };
 
-/** Shape of the `size_availability` VIEW — the real cap and who ordered what never leave the database. */
-export type SizeAvailability = {
-  size: string;
-  sort: number;
-  cap: number;
-  remaining: number;
-  sold_out: boolean;
-};
-
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -159,7 +150,6 @@ export type Database = {
     };
     Views: {
       public_reveals: View<PublicReveal>;
-      size_availability: View<SizeAvailability>;
     };
     Functions: Record<string, never>;
     Enums: Record<string, never>;

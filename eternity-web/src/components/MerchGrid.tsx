@@ -126,7 +126,7 @@ function TeeCard({ product, isEarlyBird, index }: { product: Product; isEarlyBir
         <button aria-pressed={view === 'back'} onClick={() => setView('back')}>Back</button>
       </div>
       <Pricing product={product} isEarlyBird={isEarlyBird} />
-      <Link to={`/order?product=${product.slug}`} className="btn btn-ghost">Choose the tee</Link>
+      <Link to={`/?product=${product.slug}#order`} className="btn btn-ghost">Choose the tee</Link>
     </article>
   );
 }
@@ -151,7 +151,7 @@ function ComboCard({ product, isEarlyBird, index }: { product: Product; isEarlyB
         <img src={`/img/${band}`} alt="Eternity wristband" style={{ maxHeight: 128 }} loading="lazy" decoding="async" />
       </div>
       <Pricing product={product} isEarlyBird={isEarlyBird} />
-      <Link ref={goldBtn} to={`/order?product=${product.slug}`} className="btn btn-gold magnetic">Choose the bundle</Link>
+      <Link ref={goldBtn} to={`/?product=${product.slug}#order`} className="btn btn-gold magnetic">Choose the bundle</Link>
     </article>
   );
 }
@@ -169,7 +169,7 @@ function BandCard({ product, isEarlyBird, index }: { product: Product; isEarlyBi
         <img src={`/img/${band}`} alt="Eternity wristband" style={{ maxHeight: 178 }} loading="lazy" decoding="async" />
       </div>
       <Pricing product={product} isEarlyBird={isEarlyBird} />
-      <Link to={`/order?product=${product.slug}`} className="btn btn-ghost">Choose the band</Link>
+      <Link to={`/?product=${product.slug}#order`} className="btn btn-ghost">Choose the band</Link>
     </article>
   );
 }

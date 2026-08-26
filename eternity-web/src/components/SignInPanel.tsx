@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../lib/auth';
 import { useMagnetic } from '../hooks/usePointerFx';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
 
 export default function SignInPanel() {
   const { signInPanelOpen, closeSignIn, signInWithGoogle, signInWithFacebook, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
+  const panelRef = useFocusTrap<HTMLDivElement>(signInPanelOpen);
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,7 +81,7 @@ export default function SignInPanel() {
   if (!signInPanelOpen) return null;
 
   return (
-    <div className={`auth-panel${signInPanelOpen ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Sign in">
+    <div ref={panelRef} tabIndex={-1} className={`auth-panel${signInPanelOpen ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Sign in">
       <button className="auth-close" onClick={closeSignIn}>Close</button>
       <div className="auth-card">
         <img className="crest-mark" src="/img/eternity-logo.png" alt="Eternity" />

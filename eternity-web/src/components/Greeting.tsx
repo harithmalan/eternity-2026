@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../lib/auth';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const TYPE_MS = 72;
 const DWELL_MS = 2200;
@@ -14,6 +15,7 @@ export default function Greeting() {
 
   const active = pendingGreetName !== undefined;
   const name = pendingGreetName; // string | null while active
+  const greetRef = useFocusTrap<HTMLDivElement>(active);
 
   useEffect(() => {
     if (!active) return;
@@ -63,7 +65,7 @@ export default function Greeting() {
   if (!show) return null;
 
   return (
-    <div className={`greet${active ? ' show' : ''}`} onClick={dismissGreeting}>
+    <div ref={greetRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Welcome" className={`greet${active ? ' show' : ''}`} onClick={dismissGreeting}>
       <div className="ring" />
       <div className="greet-inner">
         <img src="/img/eternity-logo.png" alt="Eternity" />

@@ -63,7 +63,7 @@ export default function MyOrdersPage() {
               <h2 className="sec-title">No orders <i>yet</i>.</h2>
             </div>
           </div>
-          <Link className="btn btn-gold" to="/order">Pre-order merch</Link>
+          <Link className="btn btn-gold" to="/#order">Pre-order merch</Link>
         </div>
       </section>
     );

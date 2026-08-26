@@ -21,16 +21,16 @@ export default function Nav() {
         <img className="uni" src="/img/UniLogo.png" alt="SLIIT City Uni" />
       </div>
       <div className="nav-links">
-        <a href="#merch"><button>Merch</button></a>
-        <a href="#sizes"><button>Size guide</button></a>
-        <a href="#order"><button>Pre-order</button></a>
+        <a href="#merch">Merch</a>
+        <a href="#sizes">Size guide</a>
+        <a href="#order">Pre-order</a>
         <LockedAction feature="lineup">
-          <Link to="/lineup"><button>Line-up</button></Link>
+          <Link to="/lineup">Line-up</Link>
         </LockedAction>
         <LockedAction feature="gallery">
-          <Link to="/gallery"><button>Gallery</button></Link>
+          <Link to="/gallery">Gallery</Link>
         </LockedAction>
-        <a href="#contact"><button>Contact</button></a>
+        <a href="#contact">Contact</a>
       </div>
 
       {user ? (

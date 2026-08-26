@@ -1,6 +1,5 @@
 import { Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
-import OrderPage from './pages/OrderPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SectionPlaceholder from './pages/SectionPlaceholder';
@@ -20,18 +19,6 @@ export default function App() {
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route
-              path="/order"
-              element={
-                <LockedRoute feature="merch">
-                  <RequireAuth>
-                    <Layout>
-                      <OrderPage />
-                    </Layout>
-                  </RequireAuth>
-                </LockedRoute>
-              }
-            />
             <Route
               path="/my-orders"
               element={
