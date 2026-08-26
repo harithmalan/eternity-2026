@@ -10,7 +10,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { Profile } from './database.types';
 
-function firstNameFrom(user: User): string | null {
+export function firstNameFrom(user: User): string | null {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   const given = meta.given_name ?? meta.first_name;
   if (typeof given === 'string' && given.trim()) return given.trim();
@@ -18,6 +18,24 @@ function firstNameFrom(user: User): string | null {
   const full = meta.full_name ?? meta.name;
   if (typeof full === 'string' && full.trim()) return full.trim().split(/\s+/)[0];
 
+  return null;
+}
+
+export function fullNameFrom(user: User): string | null {
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const full = meta.full_name ?? meta.name;
+  if (typeof full === 'string' && full.trim()) return full.trim();
+
+  const given = meta.given_name ?? meta.first_name;
+  if (typeof given === 'string' && given.trim()) return given.trim();
+
+  return null;
+}
+
+export function avatarUrlFrom(user: User): string | null {
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  if (typeof meta.avatar_url === 'string' && meta.avatar_url) return meta.avatar_url;
+  if (typeof meta.picture === 'string' && meta.picture) return meta.picture;
   return null;
 }
 
@@ -35,8 +53,8 @@ interface AuthContextValue {
   openSignIn: () => void;
   closeSignIn: () => void;
 
-  signInWithGoogle: () => Promise<AuthResult>;
-  signInWithFacebook: () => Promise<AuthResult>;
+  signInWithGoogle: (redirectTo?: string) => Promise<AuthResult>;
+  signInWithFacebook: (redirectTo?: string) => Promise<AuthResult>;
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
   signUpWithEmail: (email: string, password: string) => Promise<AuthResult & { needsConfirmation: boolean }>;
   resetPassword: (email: string) => Promise<AuthResult>;
@@ -116,18 +134,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const closeSignIn = useCallback(() => setSignInPanelOpen(false), []);
   const dismissGreeting = useCallback(() => setPendingGreetName(undefined), []);
 
-  const signInWithGoogle = useCallback(async (): Promise<AuthResult> => {
+  const signInWithGoogle = useCallback(async (redirectTo?: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: redirectTo ?? window.location.href },
     });
     return { error: error?.message ?? null };
   }, []);
 
-  const signInWithFacebook = useCallback(async (): Promise<AuthResult> => {
+  const signInWithFacebook = useCallback(async (redirectTo?: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: redirectTo ?? window.location.href },
     });
     return { error: error?.message ?? null };
   }, []);

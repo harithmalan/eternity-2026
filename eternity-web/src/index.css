@@ -27,6 +27,7 @@
   --f-display: "Bodoni Moda", serif;
   --f-body: "Sora", system-ui, sans-serif;
   --f-mono: "Chivo Mono", ui-monospace, monospace;
+  --f-countdown: "Orbitron", var(--f-mono);
   --shell: min(1180px, 92vw);
 }
 
@@ -79,12 +80,38 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 999px; transition: .3s;
 }
 .nav-cta:hover { background: var(--gold); color: #000; box-shadow: 0 0 26px rgba(242, 176, 30, .4); }
-.nav-account { display: flex; align-items: center; gap: 16px; }
-.nav-signout { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dust-dim); transition: color .25s; }
-.nav-signout:hover { color: var(--chrome); }
+.nav-account { position: relative; }
+.nav-avatar-btn { display: flex; align-items: center; gap: 10px; }
+.nav-avatar {
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  object-fit: cover; background: transparent; flex-shrink: 0;
+}
+.nav-avatar-initials { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0; color: var(--chrome); text-transform: uppercase; }
+.nav-first-name { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dust); }
+@media (max-width: 900px) { .nav-first-name { display: none; } }
+.nav-dropdown {
+  position: absolute; top: calc(100% + 14px); right: 0; width: 230px; z-index: 70;
+  background: var(--ink-2); border: 1px solid var(--line); padding: 18px;
+}
+.nav-dropdown-name { margin: 0; font-family: var(--f-body); font-weight: 300; font-size: 13.5px; color: var(--chrome); }
+.nav-dropdown-email { margin: 4px 0 0; font-family: var(--f-mono); font-size: 10.5px; color: var(--dust); word-break: break-all; }
+.nav-dropdown-rule { height: 1px; background: var(--line); margin: 16px 0; }
+.nav-dropdown-item {
+  display: block; width: 100%; text-align: left; font-family: var(--f-mono); font-size: 11px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--dust); padding: 8px 0; transition: color .2s;
+}
+.nav-dropdown-item:hover { color: var(--chrome); }
 @media (max-width: 940px) { .nav-links { display: none; } }
 
-.hero { position: relative; min-height: 100svh; display: grid; place-items: center; z-index: 2; padding: 110px 0 80px; }
+.hero { position: relative; min-height: 100svh; display: grid; place-items: center; z-index: 2; padding: 100px 0 60px; }
+.hero-texture {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: url(/img/texture-swirl.webp) center 34% / cover no-repeat;
+  opacity: .16; mix-blend-mode: screen;
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 38%, black 35%, transparent 76%);
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 38%, black 35%, transparent 76%);
+}
 .hero-inner { width: var(--shell); text-align: center; position: relative; z-index: 3; }
 .eyebrow {
   font-family: var(--f-mono); font-size: 11px; letter-spacing: .42em; text-transform: uppercase;
@@ -98,8 +125,21 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .free-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); animation: pulse 2.4s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
-.crest { width: clamp(66px, 9vw, 104px); margin: 20px auto 4px; opacity: .9; filter: drop-shadow(0 0 26px rgba(232, 234, 240, .3)); }
-.wordmark { width: min(940px, 98%); min-width: 60vw; margin: 0 auto; filter: drop-shadow(0 0 70px rgba(242, 176, 30, .2)) drop-shadow(0 0 24px rgba(232, 234, 240, .18)); }
+.crest { width: clamp(56px, 8vw, 92px); margin: 12px auto 12px; opacity: .9; filter: drop-shadow(0 0 26px rgba(232, 234, 240, .3)); }
+.wordmark { width: min(1940px, 98%); min-width: 90vw; margin: 0 auto; filter: drop-shadow(0 0 70px rgba(242, 176, 30, .2)) drop-shadow(0 0 24px rgba(232, 234, 240, .18)); }
+/*
+ * The re-cropped wordmark file is close to square (it now includes the
+ * sparkle flourish, not just the "ETERNITY" text band), so honoring the 60vw
+ * floor here would make it ~60vh tall too — alone that overflows a 900px-tall
+ * viewport before a single other hero element is drawn. Above 1024px we size
+ * it by viewport height instead so the "fits in 100svh at 1440x900" rule
+ * (the one this specific retune was verified against) wins over the 60vw
+ * floor for this asset's aspect ratio; below that the width-based sizing
+ * above still applies, since mobile isn't required to fit in one screen.
+ */
+@media (min-width: 1300px) {
+  .wordmark { width: auto; min-width: 0; height: clamp(500px, 33vh, 360px); }
+}
 .hero-sub { max-width: 520px; margin: 0 auto; color: var(--dust); font-size: clamp(14px, 1.5vw, 16px); font-weight: 200; }
 .hero-sub em { font-family: var(--f-display); font-style: italic; color: var(--chrome); }
 .coords { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 30px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -111,13 +151,24 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .cd { display: flex; justify-content: center; gap: clamp(8px, 2.4vw, 32px); margin-top: 34px; }
 .cd-unit { min-width: clamp(58px, 8.5vw, 92px); }
 .cd-num {
-  font-family: var(--f-mono); font-weight: 300; font-size: clamp(32px, 6vw, 60px); line-height: 1;
-  font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #9aa0b2 62%, #5b6072);
+  font-family: var(--f-countdown); font-weight: 600; font-size: clamp(30px, 5.6vw, 56px); line-height: 1;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #fff, #9aa0b2 62%, #5b6072);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .cd-lab { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .3em; text-transform: uppercase; color: var(--dust-dim); margin-top: 9px; }
 .cd-sep { font-family: var(--f-mono); font-size: clamp(20px, 3.6vw, 36px); color: var(--gold-dim); align-self: flex-start; margin-top: clamp(3px, .9vw, 9px); opacity: .65; }
 @media (max-width: 540px) { .cd-sep { display: none; } .cd { gap: 6px; } }
+
+.cd-sec { min-width: auto; }
+.cd-sec-row { display: inline-flex; align-items: baseline; gap: 2px; }
+.cd-ms {
+  font-family: var(--f-countdown); font-weight: 600; color: var(--gold); line-height: 1;
+  font-size: clamp(13px, 2.5vw, 25px); font-variant-numeric: tabular-nums;
+}
+.cd-ms-dot { font-family: var(--f-mono); opacity: .7; margin-right: 1px; }
+.cd-ms > span:not(.cd-ms-dot):not(.cd-ms-suffix) { display: inline-block; min-width: 3ch; }
+.cd-ms-suffix { font-family: var(--f-mono); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-dim); margin-left: 3px; }
+@media (max-width: 480px) { .cd-ms { display: none; } }
 .hero-actions { display: flex; gap: 13px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
 .btn {
   font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase;
@@ -264,6 +315,7 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
 .sizes button:disabled { opacity: .4; cursor: not-allowed; }
 .sizes button .avail-note { font-size: 7.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dust-dim); }
 .avail-warn { color: var(--gold); font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; margin-top: 10px; }
+.draft-note { color: var(--dust-dim); font-family: var(--f-mono); font-size: 10px; letter-spacing: .04em; text-align: center; margin: 10px 0 0; }
 .due-countdown { color: var(--gold); font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
 
 .order-card { border: 1px solid var(--line); background: rgba(11, 11, 16, .82); padding: 26px; }
@@ -333,6 +385,7 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
 .foot-marks .uni { height: 22px; opacity: .5; }
 .foot-meta { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--dust-dim); text-align: right; line-height: 2; }
 @media (max-width: 640px) { .foot-meta { text-align: left; } }
+.foot-credit { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 10px; letter-spacing: .14em; line-height: 1.4; }
 
 .toast {
   position: fixed; left: 50%; bottom: 34px; transform: translate(-50%, 150%); z-index: 99;
@@ -410,6 +463,12 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
 .auth-notice { color: var(--dust); font-family: var(--f-mono); font-size: 11.5px; margin: 16px 0 0; letter-spacing: .04em; }
 .auth-toggle { margin-top: 24px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; color: var(--dust); }
 .auth-toggle button { color: var(--chrome); text-decoration: underline; text-underline-offset: 3px; }
+
+.gate {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; overflow-y: auto;
+  padding: 60px 20px;
+}
+.gate .auth-card { position: relative; z-index: 3; }
 
 /* ── Skeleton loaders — chrome-on-ink, never a spinner ────────── */
 .skeleton { background: rgba(232, 234, 240, .08); animation: skeleton-pulse 1.8s ease-in-out infinite; }

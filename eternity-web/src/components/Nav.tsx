@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LockedAction from './LockedAction';
+import NavAccount from './NavAccount';
 import { useAuth } from '../lib/auth';
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
-  const { user, openSignIn, signOut } = useAuth();
+  const { user, openSignIn } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -33,14 +34,7 @@ export default function Nav() {
         <a href="#contact">Contact</a>
       </div>
 
-      {user ? (
-        <div className="nav-account">
-          <button className="nav-signout" onClick={signOut}>Sign out</button>
-          <Link to="/my-orders" className="nav-cta">My orders</Link>
-        </div>
-      ) : (
-        <button className="nav-cta" onClick={openSignIn}>Sign in</button>
-      )}
+      {user ? <NavAccount /> : <button className="nav-cta" onClick={openSignIn}>Sign in</button>}
     </nav>
   );
 }

@@ -6,6 +6,7 @@ export default function Hero() {
 
   return (
     <header className="hero">
+      <div className="hero-texture" aria-hidden="true" />
       <div className="hero-inner">
         <p className="eyebrow">SCU Get Together 2026</p>
         <div>
@@ -14,7 +15,8 @@ export default function Hero() {
         <img className="crest" src="/img/horizon.png" alt="" />
         <img className="wordmark" src="/img/eternity-logo.png" alt="Eternity" fetchPriority="high" />
         <p className="hero-sub">
-          One night that refuses to end. <em>Twenty-five years</em> of SLIIT City Uni, folded into a single evening.
+          One night that refuses to end. <em>Twenty-five years</em> of SCU, </p>
+          <p className="hero-sub">folded into a single evening.
         </p>
 
         <div className="coords">

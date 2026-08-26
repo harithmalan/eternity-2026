@@ -6,6 +6,7 @@ import SealedGrid from '../components/SealedGrid';
 import MerchGrid from '../components/MerchGrid';
 import SizeChart from '../components/SizeChart';
 import OrderForm from '../components/OrderForm';
+import ErrorBoundary from '../components/ErrorBoundary';
 import Steps from '../components/Steps';
 import Contacts from '../components/Contacts';
 import { useBatches, useProducts, useSettings, useSizeChart } from '../hooks/useEternityData';
@@ -35,7 +36,16 @@ export default function Home() {
       <SealedGrid />
       <MerchGrid products={products} settings={settings} loading={productsLoading || settingsLoading} />
       <SizeChart sizes={sizes} loading={sizesLoading} />
-      <OrderForm products={products} settings={settings} batches={batches} loading={productsLoading || settingsLoading || batchesLoading} />
+      <ErrorBoundary>
+        <OrderForm
+          products={products}
+          settings={settings}
+          batches={batches}
+          productsLoading={productsLoading}
+          settingsLoading={settingsLoading}
+          batchesLoading={batchesLoading}
+        />
+      </ErrorBoundary>
       <Steps />
       <Contacts />
     </Layout>

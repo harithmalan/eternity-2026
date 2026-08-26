@@ -10,6 +10,7 @@ import { useReveal } from '../hooks/useReveal';
 import type { Batch, Product, Settings } from '../lib/database.types';
 
 const PHONE_RE = /^(?:0|\+94)7\d{8}$/;
+const DRAFT_KEY = 'eternity:draft';
 
 interface SizeOption {
   size: string;
@@ -22,6 +23,16 @@ interface OrderResult {
   payment_due_at: string;
 }
 
+interface Draft {
+  fullName: string;
+  saNumber: string;
+  phone: string;
+  batch: string;
+  productSlug: string;
+  size: string | null;
+  qty: number;
+}
+
 function currentPrice(p: Product, isEarlyBird: boolean) {
   return isEarlyBird ? p.early_price : p.regular_price;
 }
@@ -30,14 +41,22 @@ export default function OrderForm({
   products,
   settings,
   batches,
-  loading,
+  productsLoading,
+  settingsLoading,
+  batchesLoading,
 }: {
   products: Product[];
   settings: Settings | null;
   batches: Batch[];
-  loading: boolean;
+  productsLoading: boolean;
+  settingsLoading: boolean;
+  batchesLoading: boolean;
 }) {
-  const { user, profile, saveProfile, openSignIn } = useAuth();
+  // The bank panel is static, data-wise it only needs `settings` — it must
+  // never wait on the form panel's own dependencies (products, batches,
+  // sizes), so a slow or failed fetch on that side can't take it down too.
+  const formLoading = productsLoading || batchesLoading;
+  const { user, profile, saveProfile, signInWithGoogle } = useAuth();
   const { say } = useToast();
   const [searchParams] = useSearchParams();
   const formReveal = useReveal();
@@ -62,6 +81,7 @@ export default function OrderForm({
   const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
 
   const pendingOrderId = useRef<string | null>(null);
+  const prefilled = useRef(false);
 
   // A "Choose the X" card sets ?product=slug — pick it up whenever it
   // changes, including a second click while already on this page.
@@ -76,24 +96,57 @@ export default function OrderForm({
       .from('size_chart')
       .select('size, sort')
       .order('sort')
-      .then(({ data, error }) => {
-        if (!alive) return;
-        if (error) {
+      .then(
+        ({ data, error }) => {
+          if (!alive) return;
+          if (error) {
+            setSizeError(true);
+            console.error(error);
+          } else {
+            setSizes(data ?? []);
+          }
+          setSizesLoading(false);
+        },
+        // A network-level failure rejects instead of resolving with `error`
+        // — without this second handler the promise above never settles the
+        // loading state, and the size field is stuck showing skeletons forever.
+        (err) => {
+          if (!alive) return;
           setSizeError(true);
-          console.error(error);
-        } else {
-          setSizes(data ?? []);
+          console.error(err);
+          setSizesLoading(false);
         }
-        setSizesLoading(false);
-      });
+      );
     return () => {
       alive = false;
     };
   }, []);
 
+  // A sign-in redirect (see `submit`) leaves the tab entirely — restore
+  // whatever was typed before it left, then get out of the profile
+  // pre-fill's way below so it doesn't clobber the restored draft.
+  useEffect(() => {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(DRAFT_KEY);
+    try {
+      const draft = JSON.parse(raw) as Draft;
+      setFullName(draft.fullName ?? '');
+      setSaNumber(draft.saNumber ?? '');
+      setPhone(draft.phone ?? '');
+      setBatch(draft.batch ?? '');
+      setProductSlug(draft.productSlug ?? 'combo');
+      setSize(draft.size ?? null);
+      setQty(draft.qty ?? 1);
+      prefilled.current = true;
+    } catch {
+      // Malformed draft — nothing worth restoring.
+    }
+  }, []);
+
   // Pre-fill from the profile once it's loaded — but don't clobber whatever
-  // the student has already typed if this fires again after a save.
-  const prefilled = useRef(false);
+  // the student has already typed (or a just-restored draft) if this fires
+  // again after a save.
   useEffect(() => {
     if (!profile || prefilled.current) return;
     prefilled.current = true;
@@ -125,7 +178,7 @@ export default function OrderForm({
     e.preventDefault();
     setSubmitError(null);
 
-    if (!user || !product) return;
+    if (!product) return;
     if (!fullName.trim() || !saNumber.trim() || !batch) {
       setSubmitError('Fill in every field before reserving.');
       return;
@@ -137,6 +190,30 @@ export default function OrderForm({
     }
     if (needsTee && !size) {
       setSubmitError('Pick a t-shirt size.');
+      return;
+    }
+
+    // Signed out: this button only starts sign-in. Save what's already been
+    // typed so it survives the OAuth round trip, then send them off — the
+    // draft-restore effect above puts it all back the moment they land here.
+    if (!user) {
+      const draft: Draft = {
+        fullName: fullName.trim(),
+        saNumber: saNumber.trim(),
+        phone: phone.trim(),
+        batch,
+        productSlug,
+        size,
+        qty,
+      };
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      setSubmitting(true);
+      const { error } = await signInWithGoogle(`${window.location.origin}/#order`);
+      if (error) {
+        sessionStorage.removeItem(DRAFT_KEY);
+        setSubmitError(error);
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -192,18 +269,19 @@ export default function OrderForm({
     if (finalOrder) setOrderResult(finalOrder);
   };
 
-  if (loading) {
-    return (
-      <section className="band band-line band-solid" id="order">
-        <div className="shell">
-          <div className="sec-head">
-            <div>
-              <p className="eyebrow">Pre-order</p>
-              <h2 className="sec-title">Reserve <i>yours</i>.</h2>
-            </div>
-            <p className="sec-note">Sign in first, so we can email you when your payment is verified and your order is ready.</p>
+  return (
+    <section className="band band-line band-solid" id="order">
+      <div className="shell">
+        <div className="sec-head">
+          <div>
+            <p className="eyebrow">Pre-order</p>
+            <h2 className="sec-title">Reserve <i>yours</i>.</h2>
           </div>
-          <div className="form-grid">
+          <p className="sec-note">Fill this in and reserve — you&apos;ll get your order code and deposit details straight after.</p>
+        </div>
+
+        <div className="form-grid">
+          {formLoading ? (
             <div className="panel" aria-hidden="true">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div className="field" key={i}>
@@ -213,33 +291,7 @@ export default function OrderForm({
               ))}
               <Skeleton height={44} style={{ marginTop: 20, borderRadius: 999 }} />
             </div>
-            <div className="panel bank" aria-hidden="true">
-              <Skeleton width={90} height={9} style={{ marginTop: 16 }} />
-              <Skeleton width={160} height={15} style={{ marginTop: 6 }} />
-              <Skeleton width={90} height={9} style={{ marginTop: 16 }} />
-              <Skeleton width={110} height={15} style={{ marginTop: 6 }} />
-              <Skeleton width={90} height={9} style={{ marginTop: 16 }} />
-              <Skeleton width={180} height={15} style={{ marginTop: 6 }} />
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="band band-line band-solid" id="order">
-      <div className="shell">
-        <div className="sec-head">
-          <div>
-            <p className="eyebrow">Pre-order</p>
-            <h2 className="sec-title">Reserve <i>yours</i>.</h2>
-          </div>
-          <p className="sec-note">Sign in first, so we can email you when your payment is verified and your order is ready.</p>
-        </div>
-
-        <div className="form-grid">
-          {orderResult ? (
+          ) : orderResult ? (
             <div className={`panel ${formReveal.className}`} ref={formReveal.ref} style={formReveal.style}>
               <p className="eyebrow">Reserved</p>
               <h3 style={{ marginTop: 10 }}>Order {orderResult.code}</h3>
@@ -251,19 +303,6 @@ export default function OrderForm({
               <Link className="btn btn-gold magnetic" style={{ width: '100%', marginTop: 20, textAlign: 'center' }} to="/my-orders">
                 Upload your slip
               </Link>
-            </div>
-          ) : !user ? (
-            <div className={`panel ${formReveal.className}`} ref={formReveal.ref} style={formReveal.style}>
-              <h3>Your details</h3>
-              <p className="hint">Sign in to reserve — we&apos;ll bring you right back here with your details ready to fill in.</p>
-              <button
-                type="button"
-                className="btn btn-gold magnetic"
-                style={{ width: '100%', marginTop: 20 }}
-                onClick={openSignIn}
-              >
-                Sign in to continue
-              </button>
             </div>
           ) : (
             <div className={`panel ${formReveal.className}`} ref={formReveal.ref} style={formReveal.style}>
@@ -358,8 +397,13 @@ export default function OrderForm({
                 </div>
 
                 <button ref={submitBtn} type="submit" className="btn btn-gold magnetic" style={{ width: '100%', marginTop: 20 }} disabled={submitting}>
-                  {submitting ? 'Reserving…' : 'Reserve my order'}
+                  {user
+                    ? submitting ? 'Reserving…' : 'Reserve my order'
+                    : submitting ? 'Redirecting…' : 'Sign in to reserve'}
                 </button>
+                {!user && (
+                  <p className="draft-note">We only need this so we can email you when your payment is verified.</p>
+                )}
                 {submitError && <p className="auth-error">{submitError}</p>}
               </form>
             </div>
@@ -368,13 +412,24 @@ export default function OrderForm({
           <div className={`panel bank ${bankReveal.className}`} ref={bankReveal.ref} style={bankReveal.style}>
             <h3>Where to deposit</h3>
             <p className="hint">Bank transfer or over-the-counter deposit. Keep the slip — you&apos;ll upload it.</p>
-            {settings && (
+            {settingsLoading ? (
+              <div aria-hidden="true">
+                <Skeleton width={90} height={9} style={{ marginTop: 16 }} />
+                <Skeleton width={160} height={15} style={{ marginTop: 6 }} />
+                <Skeleton width={90} height={9} style={{ marginTop: 16 }} />
+                <Skeleton width={110} height={15} style={{ marginTop: 6 }} />
+                <Skeleton width={90} height={9} style={{ marginTop: 16 }} />
+                <Skeleton width={180} height={15} style={{ marginTop: 6 }} />
+              </div>
+            ) : settings ? (
               <dl>
                 <dt>Account name</dt><dd className="name">{settings.bank_account_name}</dd>
                 <dt>Account number</dt>
                 <dd className="copy-row"><span>{settings.bank_account_no}</span><button onClick={copyAcc}>Copy</button></dd>
                 <dt>Bank</dt><dd className="name">{settings.bank_branch}</dd>
               </dl>
+            ) : (
+              <p className="auth-error">Couldn&apos;t load deposit details — message the committee below.</p>
             )}
             <div className="warn"><b>Upload your slip within 24 hours.</b> Reservations without a slip are released so someone else can take the size.</div>
             <div className="warn" style={{ borderLeftColor: 'var(--dust-dim)', background: 'rgba(232,234,240,.04)' }}>
