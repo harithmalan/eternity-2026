@@ -38,7 +38,7 @@ export default function SealedGrid() {
             <p className="eyebrow">Sealed until announced</p>
             <h2 className="sec-title">Four things we&apos;re <i>not</i> telling you yet.</h2>
           </div>
-          <p className="sec-note">Each unseals on its own schedule. Nothing here is loaded into your browser until it&apos;s officially announced.</p>
+          <p className="sec-note">Following will be unlocked at the correct time.</p>
         </div>
         <div className="seals">
           {SEAL_ORDER.map((key, i) => (

@@ -28,13 +28,13 @@ export default function SizeChart({ sizes, loading }: { sizes: SizeChartRow[]; l
         <div className={`sec-head ${head.className}`} ref={head.ref} style={head.style}>
           <div>
             <p className="eyebrow">Fit guide</p>
-            <h2 className="sec-title">Get the <i>size</i> right the first time.</h2>
+            <h2 className="sec-title">Check your <i>size</i> before you order</h2>
           </div>
-          <p className="sec-note">Unisex, regular fit. Lay a tee you already own flat and measure it — that beats guessing from your usual size.</p>
+          <p className="sec-note">“Lay a tee you usually wear and measure it that’s beats…”</p>
         </div>
         <div className={`chart-wrap ${chart.className}`} ref={chart.ref} style={chart.style}>
           <div className="chart-head">
-            <div><h3>Eternity Tee — measurements</h3><p>Garment measured flat · ±0.5 tolerance</p></div>
+            <div><h3>Eternity Tee — Size chart</h3><p>Garment measured flat · ±0.5 tolerance</p></div>
             <div className="unit-toggle">
               <button aria-pressed={unit === 'in'} onClick={() => setUnit('in')}>Inches</button>
               <button aria-pressed={unit === 'cm'} onClick={() => setUnit('cm')}>Cm</button>

@@ -46,9 +46,9 @@ export default function MerchGrid({ products, settings, loading }: MerchGridProp
         {settings && (
           <div className={`price-alert ${alertReveal.className}`} ref={alertReveal.ref} style={alertReveal.style}>
             <span className="tag">Early bird</span>
-            <p><b>Early bird ends after {earlyBirdEndLabel(settings.early_bird_ends_at)}.</b> Reserve before then to lock these prices.</p>
+            <p><b>Early bird ends on {earlyBirdEndLabel(settings.early_bird_ends_at)}.</b> Hurry up and reserve your merch now.</p>
             <span className="mini">
-              {expired ? 'Early bird has closed' : `${days}d ${pad2(hours)}h left at early bird`}
+              {expired ? 'Early bird has closed' : `${days}days ${pad2(hours)}hours only`}
             </span>
           </div>
         )}

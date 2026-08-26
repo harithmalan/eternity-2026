@@ -15,13 +15,13 @@ export default function Hero() {
         <img className="crest" src="/img/horizon.png" alt="" />
         <img className="wordmark" src="/img/eternity-logo.png" alt="Eternity" fetchPriority="high" />
         <p className="hero-sub">
-          One night that refuses to end. <em>Twenty-five years</em> of SCU, </p>
+          Night to cherish and celebrate the legacy of 25 years</p>
           <p className="hero-sub">folded into a single evening.
         </p>
 
         <div className="coords">
           <div className="coord"><div className="k">Date</div><div className="v">18 Sep 2026</div></div>
-          <div className="coord"><div className="k">Gates</div><div className="v">3:30 PM</div></div>
+          <div className="coord"><div className="k">Time</div><div className="v">3:30 PM</div></div>
           <div className="coord"><div className="k">Entry</div><div className="v">Free</div></div>
           <div className="coord"><div className="k">Venue</div><div className="v sealed">Undisclosed</div></div>
         </div>
