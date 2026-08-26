@@ -40,7 +40,7 @@ export default function MerchGrid({ products, settings, loading }: MerchGridProp
             <p className="eyebrow">Open now — pre-order</p>
             <h2 className="sec-title">Wear the <i>night</i>.</h2>
           </div>
-          <p className="sec-note">Printed to order. Reserve now, deposit within 24 hours, collect on campus before the show.</p>
+          <p className="sec-note">Please reserve your T- Shirt now ! You can make the payment and upload the receipt with in 24hrs.  We will notify when it’s ready to be collected.</p>
         </div>
 
         {settings && (
