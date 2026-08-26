@@ -8,10 +8,11 @@
 // see index.ts for how that env var is read.
 //
 // Design contract carries over from the site: void/chrome/gold tokens, one
-// gold accent per screen. Here that accent is the single rule under the
-// wordmark — every other emphasis (totals, order codes, the CTA button) is
-// chrome, matching "gold means act on this, never decoration" and keeping
-// exactly one gold element per email regardless of which template.
+// gold accent per screen. In four of these five templates that accent is
+// the rule under the wordmark — every other emphasis (totals, order codes,
+// the CTA button) is chrome. `welcome` is the deliberate exception: its CTA
+// is gold instead (see `ctaGold` on `layout()`), and the rule goes chrome
+// to compensate — still exactly one gold element, just a different one.
 
 const VOID = '#050507';
 const CHROME = '#E8EAF0';
@@ -35,6 +36,11 @@ export interface EmailSettings {
   bank_account_no: string;
   bank_branch: string;
   collection_point: string;
+  early_bird_ends_at: string;
+}
+
+export interface WelcomePayload {
+  name: string | null;
 }
 
 export interface OrderItemPayload {
@@ -73,6 +79,12 @@ function money(n: number): string {
   return 'Rs ' + Math.round(n).toLocaleString('en-LK');
 }
 
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', timeZone: 'Asia/Colombo' }).format(
+    new Date(iso)
+  );
+}
+
 function textFooter(): string {
   const wa = WHATSAPP.map((w) => `${w.who} ${w.display}`).join(' · ');
   return `\n\n—\nWhatsApp: ${wa}\nEternity · SCU Get Together 2026 · 18 September · Colombo`;
@@ -85,11 +97,27 @@ function layout(opts: {
   bodyHtml: string;
   ctaText?: string;
   ctaHref?: string;
+  // "One gold accent per screen" — normally that's the rule under the
+  // wordmark, and every CTA is chrome-outlined. `welcome`'s CTA is the one
+  // deliberate exception (it's the first, most important action a new
+  // sign-in can take), so it swaps which element carries the gold rather
+  // than adding a second one: gold button, chrome rule.
+  ctaGold?: boolean;
 }): string {
-  const { siteUrl, eyebrow, heading, bodyHtml, ctaText, ctaHref } = opts;
+  const { siteUrl, eyebrow, heading, bodyHtml, ctaText, ctaHref, ctaGold = false } = opts;
+  const ruleColor = ctaGold ? CHROME : GOLD;
 
   const cta = ctaText && ctaHref
-    ? `
+    ? ctaGold
+      ? `
+  <tr><td style="padding:32px 28px 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="background-color:${GOLD};border-radius:999px;">
+        <a href="${ctaHref}" style="display:inline-block;padding:13px 28px;font-family:${MONO};font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#0a0700;text-decoration:none;font-weight:bold;">${esc(ctaText)}</a>
+      </td>
+    </tr></table>
+  </td></tr>`
+      : `
   <tr><td style="padding:32px 28px 0;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
       <td style="border:1px solid ${CHROME};border-radius:999px;">
@@ -114,7 +142,7 @@ function layout(opts: {
   </td></tr>
   <tr><td style="padding:0;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-      <td style="height:2px;line-height:2px;font-size:2px;background-color:${GOLD};">&nbsp;</td>
+      <td style="height:2px;line-height:2px;font-size:2px;background-color:${ruleColor};">&nbsp;</td>
     </tr></table>
   </td></tr>
   <tr><td style="padding:34px 28px 4px;font-family:${MONO};font-size:11px;letter-spacing:3px;text-transform:uppercase;color:${DUST};">${esc(eyebrow)}</td></tr>
@@ -157,6 +185,40 @@ function bankBox(settings: EmailSettings): string {
         <p style="margin:0;font-family:${SANS};font-size:14px;color:${CHROME};">${esc(settings.bank_branch)}</p>
       </td></tr>
     </table>`;
+}
+
+function welcome(p: WelcomePayload, settings: EmailSettings, siteUrl: string): RenderedEmail {
+  const name = p.name?.trim() || null;
+  const subject = name ? `Welcome to Eternity, ${name}` : 'Welcome to Eternity';
+  const earlyBird = formatDate(settings.early_bird_ends_at);
+
+  const bodyHtml = `
+    <p style="margin:0 0 18px;">You're signed in — that's all we needed, nothing to confirm.</p>
+    <p style="margin:0 0 18px;">Eternity is SLIIT City Uni's 25th anniversary get-together: <b style="color:${CHROME};">18 September</b>, Colombo. Entry is <b style="color:${CHROME};">free</b>, no ticket required.</p>
+    <p style="margin:0;">Merch pre-orders are open now — early bird pricing runs until <b style="color:${CHROME};">${esc(earlyBird)}</b>.</p>`;
+
+  const text = `${subject}
+
+You're signed in — that's all we needed, nothing to confirm.
+
+Eternity is SLIIT City Uni's 25th anniversary get-together: 18 September, Colombo. Entry is free, no ticket required.
+Merch pre-orders are open now — early bird pricing runs until ${earlyBird}.
+
+Pre-order: ${siteUrl}/#order${textFooter()}`;
+
+  return {
+    subject,
+    html: layout({
+      siteUrl,
+      eyebrow: "You're in",
+      heading: subject,
+      bodyHtml,
+      ctaText: 'Pre-order merch',
+      ctaHref: `${siteUrl}/#order`,
+      ctaGold: true,
+    }),
+    text,
+  };
 }
 
 function orderReceived(p: OrderEmailPayload, settings: EmailSettings, siteUrl: string): RenderedEmail {
@@ -303,16 +365,21 @@ Manage your order: ${siteUrl}/my-orders${textFooter()}`;
   };
 }
 
-const RENDERERS: Record<string, (p: OrderEmailPayload, s: EmailSettings, siteUrl: string) => RenderedEmail> = {
+// deno-lint-ignore no-explicit-any
+const RENDERERS: Record<string, (p: any, s: EmailSettings, siteUrl: string) => RenderedEmail> = {
+  welcome,
   order_received: orderReceived,
   payment_verified: paymentVerified,
   payment_rejected: paymentRejected,
   ready_for_collection: readyForCollection,
 };
 
+// `payload` is a jsonb column, so its shape only actually promises to match
+// whichever template it was queued for — each renderer above declares the
+// specific shape it expects (WelcomePayload vs. OrderEmailPayload).
 export function renderTemplate(
   template: string,
-  payload: OrderEmailPayload,
+  payload: unknown,
   settings: EmailSettings,
   siteUrl: string
 ): RenderedEmail {

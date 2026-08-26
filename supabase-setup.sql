@@ -30,16 +30,25 @@ create table profiles (
   created_at  timestamptz not null default now()
 );
 
--- Works for Google, Facebook and email/password signups alike.
+-- Works for Google, Facebook and email/password signups alike. Also queues
+-- the one-off welcome email (see §7, email_outbox) — this trigger fires
+-- exactly once per new auth.users row, which is exactly "first sign-in."
 create or replace function handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare new_full_name text; new_first_name text;
 begin
+  new_full_name := coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name');
+
   insert into public.profiles (id,email,full_name,avatar_url)
-  values (new.id, new.email,
-          coalesce(new.raw_user_meta_data->>'full_name',
-                   new.raw_user_meta_data->>'name'),
-          new.raw_user_meta_data->>'avatar_url')
+  values (new.id, new.email, new_full_name, new.raw_user_meta_data->>'avatar_url')
   on conflict (id) do nothing;
+
+  if found then
+    new_first_name := nullif(split_part(trim(new_full_name), ' ', 1), '');
+    insert into public.email_outbox (to_email,to_name,template,payload)
+    values (new.email, new_full_name, 'welcome', jsonb_build_object('name', new_first_name));
+  end if;
+
   return new;
 end $$;
 
@@ -408,10 +417,10 @@ create table email_outbox (
   id bigserial primary key,
   to_email text not null,
   to_name  text,
-  template text not null,      -- order_received | payment_verified |
+  template text not null,      -- welcome | order_received | payment_verified |
                                -- payment_rejected | ready_for_collection
   payload  jsonb not null default '{}',
-  status   text not null default 'queued',   -- queued | sent | failed
+  status   text not null default 'queued',   -- queued | sending | sent | failed
   attempts int not null default 0,
   error    text,
   sent_at  timestamptz,
@@ -419,6 +428,30 @@ create table email_outbox (
 );
 create index email_outbox_pending on email_outbox(status, created_at)
   where status = 'queued';
+
+-- Atomically claims up to `batch_size` queued rows for the worker: the
+-- SELECT ... FOR UPDATE SKIP LOCKED happens inside the same UPDATE
+-- statement, so two overlapping cron runs can never both grab the same row
+-- — one gets it, the other's SKIP LOCKED just passes over it. Only the
+-- edge function's service_role connection may call this; a regular user
+-- calling it could silently swallow (mark 'sending' and never resolve)
+-- someone else's queued email.
+create or replace function claim_queued_emails(batch_size int default 20)
+returns setof email_outbox
+language sql security definer set search_path = public as $$
+  update email_outbox
+  set status = 'sending'
+  where id in (
+    select id from email_outbox
+    where status = 'queued'
+    order by created_at
+    limit batch_size
+    for update skip locked
+  )
+  returning *;
+$$;
+revoke execute on function claim_queued_emails(int) from public;
+grant execute on function claim_queued_emails(int) to service_role;
 
 -- Queue the right email whenever an order is created or changes state.
 create or replace function queue_order_email()

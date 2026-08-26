@@ -24,7 +24,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
-import { renderTemplate, type EmailSettings, type OrderEmailPayload } from './templates.ts';
+import { renderTemplate, type EmailSettings } from './templates.ts';
 
 const BATCH_SIZE = 20;
 const MAX_ATTEMPTS = 5;
@@ -34,7 +34,7 @@ interface OutboxRow {
   to_email: string;
   to_name: string | null;
   template: string;
-  payload: OrderEmailPayload;
+  payload: unknown;
   attempts: number;
 }
 
@@ -56,7 +56,7 @@ Deno.serve(async (_req: Request) => {
 
   const { data: settings, error: settingsError } = await supabase
     .from('settings')
-    .select('bank_account_name, bank_account_no, bank_branch, collection_point')
+    .select('bank_account_name, bank_account_no, bank_branch, collection_point, early_bird_ends_at')
     .eq('id', 1)
     .single();
 
@@ -67,15 +67,16 @@ Deno.serve(async (_req: Request) => {
     });
   }
 
-  const { data: rows, error: fetchError } = await supabase
-    .from('email_outbox')
-    .select('id, to_email, to_name, template, payload, attempts')
-    .eq('status', 'queued')
-    .order('created_at', { ascending: true })
-    .limit(BATCH_SIZE);
+  // Claims rows atomically (UPDATE ... FOR UPDATE SKIP LOCKED under the
+  // hood, see claim_queued_emails in supabase-setup.sql) — marks them
+  // 'sending' in the same statement that selects them, so an overlapping
+  // cron run can't grab the same row and double-send.
+  const { data: rows, error: claimError } = await supabase.rpc('claim_queued_emails', {
+    batch_size: BATCH_SIZE,
+  });
 
-  if (fetchError) {
-    return new Response(JSON.stringify({ error: fetchError.message }), {
+  if (claimError) {
+    return new Response(JSON.stringify({ error: claimError.message }), {
       status: 500,
       headers: { 'content-type': 'application/json' },
     });
