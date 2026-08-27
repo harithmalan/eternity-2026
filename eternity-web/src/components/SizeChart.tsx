@@ -30,7 +30,7 @@ export default function SizeChart({ sizes, loading }: { sizes: SizeChartRow[]; l
             <p className="eyebrow">Fit guide</p>
             <h2 className="sec-title">Check your <i>size</i> before you order</h2>
           </div>
-          <p className="sec-note">Lay a tee you usually wear and measure it that’s beats guessing from your usual size.</p>
+          <p className="sec-note">Lay a tee you usually wear and measure it that’s beats from your usual size.</p>
         </div>
         <div className={`chart-wrap ${chart.className}`} ref={chart.ref} style={chart.style}>
           <div className="chart-head">

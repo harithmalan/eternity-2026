@@ -122,7 +122,7 @@ export default function SealedGrid({ settings }: { settings: Settings | null }) 
               )}
             </h2>
           </div>
-          <p className="sec-note">Each one unseals on its own schedule. Keep watching.</p>
+          <p className="sec-note">Following will be unlocked at the correct time.</p>
         </div>
 
         <div className="seals" ref={statusRef}>
@@ -175,7 +175,7 @@ function StatusCard({ row, glyph, index }: { row: PublicReveal; glyph: string; i
           </a>
         )}
       </div>
-      <StatusStamp announced={isRevealed} revealedAt={row.revealed_at} />
+      {/* <StatusStamp announced={isRevealed} revealedAt={row.revealed_at} /> */}
     </div>
   );
 }
@@ -198,14 +198,12 @@ function ArtistsStatusCard({ artists, index }: { artists: PublicArtist[]; index:
       <div className="k">Artists on stage</div>
       <div className="seal-mid">
         <div className="scramble status-value">{artists.length} announced</div>
-        <div className="artist-thumbs" aria-hidden={artists.length === 0}>
+        {/* <div className="artist-thumbs" aria-hidden={artists.length === 0}>
           {visibleThumbs.map((artist) => (
             <TinyThumb key={artist.id} artist={artist} />
           ))}
-          {hiddenCount > 0 && <span className="thumb-more">+{hiddenCount}</span>}
-        </div>
+        </div> */}
       </div>
-      <StatusStamp announced={announced} />
     </button>
   );
 }
