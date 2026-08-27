@@ -187,13 +187,15 @@ create table artists (
   name text not null,
   tagline text,
   photo_path text,           -- path within the `artists` storage bucket
+  instagram text,
+  spotify text,
   is_revealed boolean not null default false,
   revealed_at timestamptz,
   sort int not null default 0
 );
 
 create or replace view public_artists with (security_invoker = off) as
-  select id, name, tagline, photo_path, revealed_at, sort
+  select id, name, tagline, photo_path, instagram, spotify, revealed_at, sort
   from artists
   where is_revealed
   order by sort;
@@ -219,7 +221,8 @@ begin
     perform realtime.send(
       jsonb_build_object(
         'id', new.id, 'name', new.name, 'tagline', new.tagline,
-        'photo_path', new.photo_path, 'revealed_at', new.revealed_at, 'sort', new.sort
+        'photo_path', new.photo_path, 'instagram', new.instagram, 'spotify', new.spotify,
+        'revealed_at', new.revealed_at, 'sort', new.sort
       ),
       'artist_change',   -- event
       'public_artists',  -- topic — matches the view name for the client

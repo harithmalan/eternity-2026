@@ -75,6 +75,8 @@ export type PublicArtist = {
   name: string;
   tagline: string | null;
   photo_path: string | null;
+  instagram?: string | null;
+  spotify?: string | null;
   revealed_at: string | null;
   sort: number;
 };
