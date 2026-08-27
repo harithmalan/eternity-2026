@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="foot-meta">
           ETERNITY · 18 SEPTEMBER 2026 · FREE ENTRY<br />
           PRESENTED BY THE STUDENT INTERACTIVE SOCIETY<br />
-          SLIIT CITY UNI · COLOMBO
+          SCU · COLOMBO
           <div className="foot-credit">DEVELOPED BY HARITH</div>
         </div>
       </div>

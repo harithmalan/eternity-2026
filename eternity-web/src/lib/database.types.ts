@@ -37,6 +37,8 @@ export type Settings = {
   bank_account_name: string;
   bank_account_no: string;
   bank_branch: string;
+  artist_placeholders: number;
+  more_artists_coming: boolean;
 };
 
 export type Feature = {
@@ -60,6 +62,21 @@ export type PublicReveal = {
   revealed_at: string | null;
   value: string | null;
   detail: string | null;
+  link_url: string | null;
+};
+
+/**
+ * Shape of the `public_artists` VIEW — never the `artists` table. A sealed
+ * artist has no row here at all (not a nulled row), so there's nothing
+ * client-side that could leak an unannounced name.
+ */
+export type PublicArtist = {
+  id: string;
+  name: string;
+  tagline: string | null;
+  photo_path: string | null;
+  revealed_at: string | null;
+  sort: number;
 };
 
 export type UserRole = 'user' | 'admin' | 'superadmin';
@@ -150,6 +167,7 @@ export type Database = {
     };
     Views: {
       public_reveals: View<PublicReveal>;
+      public_artists: View<PublicArtist>;
     };
     Functions: Record<string, never>;
     Enums: Record<string, never>;

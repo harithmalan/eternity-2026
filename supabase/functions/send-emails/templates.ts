@@ -4,8 +4,8 @@
 // actually survives Outlook, Gmail's clipped inbox HTML, and every other
 // email client that ignores or strips modern CSS. The Eternity wordmark and
 // the SIS/SCU marks are referenced as hosted PNGs (SVG doesn't render in
-// most mail clients) from SITE_URL, which must be a public, reachable URL —
-// see index.ts for how that env var is read.
+// most mail clients) from the public `merch` storage bucket — see index.ts
+// for how that URL is built.
 //
 // Design contract carries over from the site: void/chrome/gold tokens, one
 // gold accent per screen. In four of these five templates that accent is
@@ -91,7 +91,7 @@ function textFooter(): string {
 }
 
 function layout(opts: {
-  siteUrl: string;
+  assetsUrl: string;
   eyebrow: string;
   heading: string;
   bodyHtml: string;
@@ -104,7 +104,7 @@ function layout(opts: {
   // than adding a second one: gold button, chrome rule.
   ctaGold?: boolean;
 }): string {
-  const { siteUrl, eyebrow, heading, bodyHtml, ctaText, ctaHref, ctaGold = false } = opts;
+  const { assetsUrl, eyebrow, heading, bodyHtml, ctaText, ctaHref, ctaGold = false } = opts;
   const ruleColor = ctaGold ? CHROME : GOLD;
 
   const cta = ctaText && ctaHref
@@ -133,12 +133,13 @@ function layout(opts: {
 
   return `<!doctype html>
 <html>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
 <body style="margin:0;padding:0;background-color:${VOID};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${VOID};">
 <tr><td align="center" style="padding:48px 16px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:${VOID};">
   <tr><td align="center" style="padding:0 0 26px;">
-    <img src="${siteUrl}/img/eternity-logo.png" width="200" alt="Eternity" style="display:block;width:200px;max-width:60%;height:auto;border:0;" />
+    <img src="${assetsUrl}/eternity-logo.png" width="200" alt="Eternity" style="display:block;width:200px;max-width:60%;height:auto;border:0;" />
   </td></tr>
   <tr><td style="padding:0;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
@@ -160,8 +161,8 @@ function layout(opts: {
     ${whatsapp}
   </td></tr>
   <tr><td align="center" style="padding:18px 28px 8px;">
-    <img src="${siteUrl}/img/sis-logo.png" height="30" alt="Student Interactive Society" style="display:inline-block;height:30px;width:auto;border:0;vertical-align:middle;margin:0 10px;" />
-    <img src="${siteUrl}/img/scu-25.png" height="24" alt="SCU 25 Years of Trust" style="display:inline-block;height:24px;width:auto;border:0;vertical-align:middle;margin:0 10px;" />
+    <img src="${assetsUrl}/sis-logo.png" height="30" alt="Student Interactive Society" style="display:inline-block;height:30px;width:auto;border:0;vertical-align:middle;margin:0 10px;" />
+    <img src="${assetsUrl}/scu-25.png" height="24" alt="SCU 25 Years of Trust" style="display:inline-block;height:24px;width:auto;border:0;vertical-align:middle;margin:0 10px;" />
   </td></tr>
   <tr><td align="center" style="padding:10px 28px 40px;font-family:${MONO};font-size:9.5px;letter-spacing:1px;color:${DUST_DIM};">
     ETERNITY &middot; SCU GET TOGETHER 2026 &middot; 18 SEPTEMBER &middot; COLOMBO
@@ -187,9 +188,10 @@ function bankBox(settings: EmailSettings): string {
     </table>`;
 }
 
-function welcome(p: WelcomePayload, settings: EmailSettings, siteUrl: string): RenderedEmail {
+function welcome(p: WelcomePayload, settings: EmailSettings, siteUrl: string, assetsUrl: string): RenderedEmail {
   const name = p.name?.trim() || null;
   const subject = name ? `Welcome to Eternity, ${name}` : 'Welcome to Eternity';
+  const greeting = name ? `Hello, ${name}.` : 'Hello there.';
   const earlyBird = formatDate(settings.early_bird_ends_at);
 
   const bodyHtml = `
@@ -197,7 +199,7 @@ function welcome(p: WelcomePayload, settings: EmailSettings, siteUrl: string): R
     <p style="margin:0 0 18px;">Eternity is SLIIT City Uni's 25th anniversary get-together: <b style="color:${CHROME};">18 September</b>, Colombo. Entry is <b style="color:${CHROME};">free</b>, no ticket required.</p>
     <p style="margin:0;">Merch pre-orders are open now — early bird pricing runs until <b style="color:${CHROME};">${esc(earlyBird)}</b>.</p>`;
 
-  const text = `${subject}
+  const text = `${greeting}
 
 You're signed in — that's all we needed, nothing to confirm.
 
@@ -209,9 +211,9 @@ Pre-order: ${siteUrl}/#order${textFooter()}`;
   return {
     subject,
     html: layout({
-      siteUrl,
+      assetsUrl,
       eyebrow: "You're in",
-      heading: subject,
+      heading: greeting,
       bodyHtml,
       ctaText: 'Pre-order merch',
       ctaHref: `${siteUrl}/#order`,
@@ -221,7 +223,7 @@ Pre-order: ${siteUrl}/#order${textFooter()}`;
   };
 }
 
-function orderReceived(p: OrderEmailPayload, settings: EmailSettings, siteUrl: string): RenderedEmail {
+function orderReceived(p: OrderEmailPayload, settings: EmailSettings, siteUrl: string, assetsUrl: string): RenderedEmail {
   const items = p.items ?? [];
   const itemRows = items
     .map(
@@ -263,7 +265,7 @@ Manage your order: ${siteUrl}/my-orders${textFooter()}`;
   return {
     subject: `We've got your order, ${p.name}`,
     html: layout({
-      siteUrl,
+      assetsUrl,
       eyebrow: 'Order received',
       heading: `We've got your order, ${p.name}`,
       bodyHtml,
@@ -274,7 +276,7 @@ Manage your order: ${siteUrl}/my-orders${textFooter()}`;
   };
 }
 
-function paymentVerified(p: OrderEmailPayload, _settings: EmailSettings, siteUrl: string): RenderedEmail {
+function paymentVerified(p: OrderEmailPayload, _settings: EmailSettings, siteUrl: string, assetsUrl: string): RenderedEmail {
   const bodyHtml = `
     <p style="margin:0 0 18px;">We've verified <b style="color:${CHROME};">${money(p.total)}</b> for order <b style="color:${CHROME};">${esc(p.code)}</b>.</p>
     <p style="margin:0;font-family:${SANS};color:${DUST};">We'll email you again when it's printed and ready to collect.</p>`;
@@ -289,7 +291,7 @@ Your order: ${siteUrl}/my-orders${textFooter()}`;
   return {
     subject: `Payment verified — you're in`,
     html: layout({
-      siteUrl,
+      assetsUrl,
       eyebrow: 'Payment verified',
       heading: `You're in, ${p.name}`,
       bodyHtml,
@@ -300,7 +302,7 @@ Your order: ${siteUrl}/my-orders${textFooter()}`;
   };
 }
 
-function paymentRejected(p: OrderEmailPayload, _settings: EmailSettings, siteUrl: string): RenderedEmail {
+function paymentRejected(p: OrderEmailPayload, _settings: EmailSettings, siteUrl: string, assetsUrl: string): RenderedEmail {
   const reason = p.reason || 'The slip could not be matched to this order.';
   const bodyHtml = `
     <p style="margin:0 0 18px;">We couldn't verify the payment slip for order <b style="color:${CHROME};">${esc(p.code)}</b>.</p>
@@ -317,7 +319,7 @@ Upload a new slip to continue: ${siteUrl}/my-orders${textFooter()}`;
   return {
     subject: `We couldn't verify your slip`,
     html: layout({
-      siteUrl,
+      assetsUrl,
       eyebrow: 'Action needed',
       heading: `Order ${p.code} needs a new slip`,
       bodyHtml,
@@ -328,7 +330,7 @@ Upload a new slip to continue: ${siteUrl}/my-orders${textFooter()}`;
   };
 }
 
-function readyForCollection(p: OrderEmailPayload, settings: EmailSettings, siteUrl: string): RenderedEmail {
+function readyForCollection(p: OrderEmailPayload, settings: EmailSettings, siteUrl: string, assetsUrl: string): RenderedEmail {
   const bodyHtml = `
     <p style="margin:0 0 20px;">Order <b style="color:${CHROME};">${esc(p.code)}</b> is printed and waiting for you.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${LINE};margin:0 0 6px;">
@@ -354,7 +356,7 @@ Manage your order: ${siteUrl}/my-orders${textFooter()}`;
   return {
     subject: `Your order is ready to collect`,
     html: layout({
-      siteUrl,
+      assetsUrl,
       eyebrow: 'Ready for collection',
       heading: `${p.name}, come get it`,
       bodyHtml,
@@ -366,7 +368,7 @@ Manage your order: ${siteUrl}/my-orders${textFooter()}`;
 }
 
 // deno-lint-ignore no-explicit-any
-const RENDERERS: Record<string, (p: any, s: EmailSettings, siteUrl: string) => RenderedEmail> = {
+const RENDERERS: Record<string, (p: any, s: EmailSettings, siteUrl: string, assetsUrl: string) => RenderedEmail> = {
   welcome,
   order_received: orderReceived,
   payment_verified: paymentVerified,
@@ -374,16 +376,38 @@ const RENDERERS: Record<string, (p: any, s: EmailSettings, siteUrl: string) => R
   ready_for_collection: readyForCollection,
 };
 
+// Trailing whitespace at the end of a line is exactly what forces a
+// quoted-printable encoder to escape it as `=20` (trailing whitespace
+// before a line break is otherwise ambiguous in QP) — the generated
+// template literals above are indented for readability in this file, which
+// left plenty of it. Stripped once, centrally, here, rather than trying to
+// keep every template's markup byte-perfect by hand.
+function stripTrailingWhitespace(s: string): string {
+  return s
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+$/, ''))
+    .join('\n');
+}
+
 // `payload` is a jsonb column, so its shape only actually promises to match
 // whichever template it was queued for — each renderer above declares the
 // specific shape it expects (WelcomePayload vs. OrderEmailPayload).
+// `assetsUrl` is the public `merch` storage bucket base
+// (https://…supabase.co/storage/v1/object/public/merch) that the wordmark
+// and SIS/SCU marks are hosted from — see index.ts.
 export function renderTemplate(
   template: string,
   payload: unknown,
   settings: EmailSettings,
-  siteUrl: string
+  siteUrl: string,
+  assetsUrl: string
 ): RenderedEmail {
   const renderer = RENDERERS[template];
   if (!renderer) throw new Error(`Unknown email template: ${template}`);
-  return renderer(payload, settings, siteUrl);
+  const email = renderer(payload, settings, siteUrl, assetsUrl);
+  return {
+    subject: email.subject,
+    html: stripTrailingWhitespace(email.html),
+    text: stripTrailingWhitespace(email.text),
+  };
 }

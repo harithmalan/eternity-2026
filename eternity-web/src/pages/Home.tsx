@@ -33,7 +33,7 @@ export default function Home() {
   return (
     <Layout>
       <Hero />
-      <SealedGrid />
+      <SealedGrid settings={settings} />
       <MerchGrid products={products} settings={settings} loading={productsLoading || settingsLoading} />
       <SizeChart sizes={sizes} loading={sizesLoading} />
       <ErrorBoundary>

@@ -112,20 +112,21 @@ insert into features (key,label,is_live,sort) values
 -- `value` must never reach the browser before is_revealed = true.
 create table reveals (
   key text primary key, label text not null,
-  value text, detail text,
+  value text, detail text, link_url text,
   is_revealed boolean not null default false,
   revealed_at timestamptz, sort int not null default 0
 );
-insert into reveals (key,label,value,sort) values
- ('artists','Artists on stage','',1),
- ('venue',  'Venue','Air Force Ground, Colombo',2),
- ('start',  'Show start','',3),
- ('stage',  'Stage design','',4);
+insert into reveals (key,label,value,link_url,sort) values
+ ('artists','Artists on stage','',null,1),
+ ('venue',  'Venue','Air Force Ground, Colombo','https://maps.google.com/?q=Air+Force+Ground+Colombo',2),
+ ('start',  'Show start','',null,3),
+ ('stage',  'Stage design','',null,4);
 
 create or replace view public_reveals with (security_invoker = off) as
   select key,label,sort,is_revealed,revealed_at,
-         case when is_revealed then value  else null end as value,
-         case when is_revealed then detail else null end as detail
+         case when is_revealed then value    else null end as value,
+         case when is_revealed then detail   else null end as detail,
+         case when is_revealed then link_url else null end as link_url
   from reveals;
 
 create or replace function stamp_reveal()
@@ -159,8 +160,9 @@ begin
     jsonb_build_object(
       'key', new.key, 'label', new.label, 'sort', new.sort,
       'is_revealed', new.is_revealed, 'revealed_at', new.revealed_at,
-      'value',  case when new.is_revealed then new.value  else null end,
-      'detail', case when new.is_revealed then new.detail else null end
+      'value',    case when new.is_revealed then new.value    else null end,
+      'detail',   case when new.is_revealed then new.detail   else null end,
+      'link_url', case when new.is_revealed then new.link_url else null end
     ),
     'reveal_change',   -- event
     'public_reveals',  -- topic — matches the view name for the client
@@ -171,6 +173,63 @@ end $$;
 
 create trigger trg_broadcast_reveal after insert or update on reveals
   for each row execute function broadcast_reveal_change();
+
+-- ═══ 4b. ARTISTS (revealed one at a time) ══════════════════════
+-- A separate table rather than folding into `reveals`: reveals is one row
+-- per fixed card, but the artists card grows one name at a time as the
+-- committee confirms each act, so it needs its own row-per-artist shape.
+-- Same "nothing sealed reaches the browser" rule as reveals — but here
+-- that's enforced by `public_artists` simply omitting unrevealed rows
+-- entirely (see below) rather than nulling their columns, since even the
+-- *existence* of a not-yet-announced artist shouldn't leak.
+create table artists (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  tagline text,
+  photo_path text,           -- path within the `artists` storage bucket
+  is_revealed boolean not null default false,
+  revealed_at timestamptz,
+  sort int not null default 0
+);
+
+create or replace view public_artists with (security_invoker = off) as
+  select id, name, tagline, photo_path, revealed_at, sort
+  from artists
+  where is_revealed
+  order by sort;
+
+create or replace function stamp_artist_reveal()
+returns trigger language plpgsql as $$
+begin
+  if new.is_revealed and not old.is_revealed then new.revealed_at := now();
+  elsif not new.is_revealed then new.revealed_at := null; end if;
+  return new;
+end $$;
+create trigger trg_stamp_artist_reveal before update on artists
+  for each row execute function stamp_artist_reveal();
+
+-- Same masked-broadcast approach as broadcast_reveal_change(), except a
+-- sealed artist is never sent at all rather than sent with nulled fields —
+-- `public_artists` doesn't expose a row for it either, so there's nothing
+-- safe to broadcast until `is_revealed` flips true.
+create or replace function broadcast_artist_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.is_revealed then
+    perform realtime.send(
+      jsonb_build_object(
+        'id', new.id, 'name', new.name, 'tagline', new.tagline,
+        'photo_path', new.photo_path, 'revealed_at', new.revealed_at, 'sort', new.sort
+      ),
+      'artist_change',   -- event
+      'public_artists',  -- topic — matches the view name for the client
+      false              -- public: no realtime.messages RLS policy needed
+    );
+  end if;
+  return new;
+end $$;
+create trigger trg_broadcast_artist after insert or update on artists
+  for each row execute function broadcast_artist_change();
 
 -- ═══ 5. PRODUCTS ═══════════════════════════════════════════════
 create table products (
@@ -212,7 +271,12 @@ create table settings (
   bank_account_no    text not null default '73031923',
   bank_branch        text not null default 'Bank of Ceylon — Kollupitiya Branch',
   collection_point   text not null default '12th Floor Common Room',
-  band_capacity      int  not null default 300 check (band_capacity >= 0)
+  band_capacity      int  not null default 300 check (band_capacity >= 0),
+  -- Artists card display-only knobs — NOT derived from how many artist rows
+  -- exist or are revealed. `artist_placeholders` is a committee-set guess
+  -- at remaining silhouette count, not the true remaining number.
+  artist_placeholders int not null default 4 check (artist_placeholders >= 0),
+  more_artists_coming boolean not null default true
 );
 insert into settings (id) values (1);
 
@@ -423,6 +487,7 @@ create table email_outbox (
   status   text not null default 'queued',   -- queued | sending | sent | failed
   attempts int not null default 0,
   error    text,
+  claimed_at timestamptz,      -- when a worker last marked this 'sending'
   sent_at  timestamptz,
   created_at timestamptz not null default now()
 );
@@ -436,11 +501,24 @@ create index email_outbox_pending on email_outbox(status, created_at)
 -- edge function's service_role connection may call this; a regular user
 -- calling it could silently swallow (mark 'sending' and never resolve)
 -- someone else's queued email.
+--
+-- Before claiming anything new, it also reclaims rows some *earlier* run
+-- left stuck in 'sending' — the edge function's own per-row try/catch
+-- guarantees a row resolves to 'sent' or 'failed' as long as the function
+-- itself keeps running, but nothing protects against the whole invocation
+-- being killed mid-batch (timeout, OOM, cold-start crash). A row stuck in
+-- 'sending' for more than 5 minutes was orphaned by exactly that, not by
+-- a send still legitimately in flight — 20 emails take seconds, not minutes.
 create or replace function claim_queued_emails(batch_size int default 20)
 returns setof email_outbox
 language sql security definer set search_path = public as $$
   update email_outbox
-  set status = 'sending'
+  set status = 'queued',
+      error = coalesce(error || ' ', '') || '[reclaimed after stall]'
+  where status = 'sending' and claimed_at < now() - interval '5 minutes';
+
+  update email_outbox
+  set status = 'sending', claimed_at = now()
   where id in (
     select id from email_outbox
     where status = 'queued'
@@ -454,6 +532,15 @@ revoke execute on function claim_queued_emails(int) from public;
 grant execute on function claim_queued_emails(int) to service_role;
 
 -- Queue the right email whenever an order is created or changes state.
+-- Deliberately stores only the order `code`, nothing else: on INSERT
+-- specifically, order_items hasn't been written yet and recalc_order()
+-- (triggered by that insert) hasn't run, so `new.total` is still 0 and
+-- `order_items` for this order is still empty at the exact moment this
+-- fires. A snapshot taken here would be wrong by construction. The worker
+-- looks the order up fresh by code at send time instead (see
+-- send-emails/index.ts) — for all four of these templates, not just
+-- order_received, so nothing here can ever go stale between queuing and
+-- sending either.
 create or replace function queue_order_email()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare tpl text;
@@ -471,15 +558,7 @@ begin
   if tpl is null then return new; end if;
 
   insert into email_outbox (to_email,to_name,template,payload)
-  values (new.email, new.full_name, tpl,
-    jsonb_build_object(
-      'code', new.code, 'total', new.total, 'name', new.full_name,
-      'batch', new.batch, 'due', new.payment_due_at,
-      'reason', new.rejection_reason,
-      'items', (select jsonb_agg(jsonb_build_object(
-                  'product',i.product_name,'size',i.size,'qty',i.qty,'unit',i.unit_price))
-                from order_items i where i.order_id = new.id)
-    ));
+  values (new.email, new.full_name, tpl, jsonb_build_object('code', new.code));
   return new;
 end $$;
 
@@ -542,6 +621,11 @@ create policy "admins read reveals"  on reveals for select using (is_admin());
 create policy "admins write reveals" on reveals for all using (is_admin()) with check (is_admin());
 grant select on public_reveals to anon, authenticated;
 
+alter table artists enable row level security;
+create policy "admins read artists"  on artists for select using (is_admin());
+create policy "admins write artists" on artists for all using (is_admin()) with check (is_admin());
+grant select on public_artists to anon, authenticated;
+
 alter table size_stock enable row level security;
 create policy "admins write size stock" on size_stock for all using (is_admin()) with check (is_admin());
 grant select on size_availability to anon, authenticated;
@@ -570,13 +654,18 @@ create policy "admins read audit"  on audit_log    for select using (is_admin())
 
 -- ═══ 10. STORAGE ═══════════════════════════════════════════════
 insert into storage.buckets (id,name,public) values
- ('merch','merch',true), ('slips','slips',false)
+ ('merch','merch',true), ('slips','slips',false), ('artists','artists',true)
 on conflict do nothing;
 
 create policy "public reads merch" on storage.objects for select using (bucket_id = 'merch');
 create policy "admins write merch" on storage.objects for all
   using (bucket_id = 'merch' and is_admin())
   with check (bucket_id = 'merch' and is_admin());
+
+create policy "public reads artist photos" on storage.objects for select using (bucket_id = 'artists');
+create policy "admins write artist photos" on storage.objects for all
+  using (bucket_id = 'artists' and is_admin())
+  with check (bucket_id = 'artists' and is_admin());
 
 -- slips live at  slips/<user_id>/<order_code>.<ext>
 create policy "upload own slip" on storage.objects for insert
