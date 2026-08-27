@@ -183,8 +183,8 @@ function StatusCard({ row, glyph, index }: { row: PublicReveal; glyph: string; i
 function ArtistsStatusCard({ artists, index }: { artists: PublicArtist[]; index: number }) {
   const reveal = useReveal(index);
   const announced = artists.length > 0;
-  const visibleThumbs = artists.slice(0, 5);
-  const hiddenCount = Math.max(0, artists.length - visibleThumbs.length);
+  // const visibleThumbs = artists.slice(0, 5);
+  // const hiddenCount = Math.max(0, artists.length - visibleThumbs.length);
 
   return (
     <button
@@ -208,29 +208,29 @@ function ArtistsStatusCard({ artists, index }: { artists: PublicArtist[]; index:
   );
 }
 
-function StatusStamp({ announced, revealedAt }: { announced: boolean; revealedAt?: string | null }) {
-  return (
-    <div className={`stamp${announced ? ' announced' : ''}`}>
-      <span className="dot" />
-      {announced ? `Announced${revealedAt ? ` - ${formatRevealedAt(revealedAt)}` : ''}` : 'Sealed'}
-    </div>
-  );
-}
+// function StatusStamp({ announced, revealedAt }: { announced: boolean; revealedAt?: string | null }) {
+//   return (
+//     <div className={`stamp${announced ? ' announced' : ''}`}>
+//       <span className="dot" />
+//       {announced ? `Announced${revealedAt ? ` - ${formatRevealedAt(revealedAt)}` : ''}` : 'Sealed'}
+//     </div>
+//   );
+// }
 
-function TinyThumb({ artist }: { artist: PublicArtist }) {
-  const [failed, setFailed] = useState(false);
-  const photoUrl = artistPhotoUrl(artist);
+// function TinyThumb({ artist }: { artist: PublicArtist }) {
+//   const [failed, setFailed] = useState(false);
+//   const photoUrl = artistPhotoUrl(artist);
 
-  return (
-    <span className="artist-thumb" title={artist.name}>
-      {photoUrl && !failed ? (
-        <img src={photoUrl} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
-      ) : (
-        <span>{artistInitial(artist.name)}</span>
-      )}
-    </span>
-  );
-}
+//   return (
+//     <span className="artist-thumb" title={artist.name}>
+//       {photoUrl && !failed ? (
+//         <img src={photoUrl} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+//       ) : (
+//         <span>{artistInitial(artist.name)}</span>
+//       )}
+//     </span>
+//   );
+// }
 
 function Lineup({ artists, settings, freshIds }: { artists: PublicArtist[]; settings: Settings | null; freshIds: Set<string> }) {
   const placeholderSlots = Math.max(0, settings?.artist_placeholders ?? 4);
