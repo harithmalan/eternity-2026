@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type {
+  Artist,
   BandAvailability,
   Batch,
   EmailOutboxRow,
@@ -63,6 +64,13 @@ export const useBatches = makeListHook<Batch>(() =>
 
 export const useReveals = makeListHook<Reveal>(() =>
   supabase.from('reveals').select('*').order('sort')
+);
+
+// Reads the base `artists` table, never `public_artists` — admins need to
+// see sealed artists (to edit/reveal them) as well as announced ones; the
+// public view exists specifically to hide the former from everyone else.
+export const useArtists = makeListHook<Artist>(() =>
+  supabase.from('artists').select('*').order('sort')
 );
 
 export const useFeatures = makeListHook<Feature>(() =>

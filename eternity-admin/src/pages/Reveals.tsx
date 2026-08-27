@@ -40,12 +40,14 @@ function RevealRow({
 }) {
   const [value, setValue] = useState(reveal.value ?? '');
   const [detail, setDetail] = useState(reveal.detail ?? '');
+  const [linkUrl, setLinkUrl] = useState(reveal.link_url ?? '');
   const [saving, setSaving] = useState(false);
-  const dirty = value !== (reveal.value ?? '') || detail !== (reveal.detail ?? '');
+  const dirty =
+    value !== (reveal.value ?? '') || detail !== (reveal.detail ?? '') || linkUrl !== (reveal.link_url ?? '');
 
   const save = async () => {
     setSaving(true);
-    await supabase.from('reveals').update({ value, detail }).eq('key', reveal.key);
+    await supabase.from('reveals').update({ value, detail, link_url: linkUrl || null }).eq('key', reveal.key);
     setSaving(false);
     onSaved();
   };
@@ -87,6 +89,10 @@ function RevealRow({
           <label>Detail (optional)</label>
           <input value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Extra line, shown under the value" />
         </div>
+      </div>
+      <div className="field">
+        <label>Map link (optional)</label>
+        <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://maps.google.com/?q=..." />
       </div>
       <button className="btn btn-ghost btn-sm" disabled={!dirty || saving} onClick={save}>
         {saving ? 'Saving…' : 'Save'}

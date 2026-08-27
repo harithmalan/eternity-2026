@@ -37,6 +37,19 @@ export type Reveal = {
   label: string;
   value: string | null;
   detail: string | null;
+  link_url: string | null;
+  is_revealed: boolean;
+  revealed_at: string | null;
+  sort: number;
+};
+
+export type Artist = {
+  id: string;
+  name: string;
+  tagline: string | null;
+  photo_path: string | null;
+  instagram: string | null;
+  spotify: string | null;
   is_revealed: boolean;
   revealed_at: string | null;
   sort: number;
@@ -69,6 +82,8 @@ export type Settings = {
   bank_branch: string;
   collection_point: string;
   band_capacity: number;
+  artist_placeholders: number;
+  more_artists_coming: boolean;
 };
 
 export type SizeChartRow = {
@@ -189,6 +204,7 @@ export type Database = {
       batches: Table<Batch>;
       features: Table<Feature>;
       reveals: Table<Reveal>;
+      artists: Table<Artist>;
       products: Table<Product>;
       settings: Table<Settings>;
       size_chart: Table<SizeChartRow>;

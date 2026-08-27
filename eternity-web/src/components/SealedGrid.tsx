@@ -122,7 +122,7 @@ export default function SealedGrid({ settings }: { settings: Settings | null }) 
               )}
             </h2>
           </div>
-          <p className="sec-note">Following will be unlocked at the correct time.</p>
+          <p className="sec-note">Each one unseals on its own schedule. Keep watching.</p>
         </div>
 
         <div className="seals" ref={statusRef}>
@@ -171,11 +171,10 @@ function StatusCard({ row, glyph, index }: { row: PublicReveal; glyph: string; i
         </div>
         {isRevealed && row.link_url && (
           <a className="seal-link" href={row.link_url} target="_blank" rel="noopener">
-            Open in Google Maps
+            Open in Google Maps →
           </a>
         )}
       </div>
-      {/* <StatusStamp announced={isRevealed} revealedAt={row.revealed_at} /> */}
     </div>
   );
 }
@@ -183,8 +182,8 @@ function StatusCard({ row, glyph, index }: { row: PublicReveal; glyph: string; i
 function ArtistsStatusCard({ artists, index }: { artists: PublicArtist[]; index: number }) {
   const reveal = useReveal(index);
   const announced = artists.length > 0;
-  // const visibleThumbs = artists.slice(0, 5);
-  // const hiddenCount = Math.max(0, artists.length - visibleThumbs.length);
+  const visibleThumbs = artists.slice(0, 5);
+  const hiddenCount = Math.max(0, artists.length - visibleThumbs.length);
 
   return (
     <button
@@ -198,43 +197,48 @@ function ArtistsStatusCard({ artists, index }: { artists: PublicArtist[]; index:
       <div className="k">Artists on stage</div>
       <div className="seal-mid">
         <div className="scramble status-value">{artists.length} announced</div>
-        {/* <div className="artist-thumbs" aria-hidden={artists.length === 0}>
+        <div className="artist-thumbs" aria-hidden={artists.length === 0}>
           {visibleThumbs.map((artist) => (
             <TinyThumb key={artist.id} artist={artist} />
           ))}
-        </div> */}
+          {hiddenCount > 0 && <span className="thumb-more">+{hiddenCount}</span>}
+        </div>
       </div>
+      <StatusStamp announced={announced} />
     </button>
   );
 }
 
-// function StatusStamp({ announced, revealedAt }: { announced: boolean; revealedAt?: string | null }) {
-//   return (
-//     <div className={`stamp${announced ? ' announced' : ''}`}>
-//       <span className="dot" />
-//       {announced ? `Announced${revealedAt ? ` - ${formatRevealedAt(revealedAt)}` : ''}` : 'Sealed'}
-//     </div>
-//   );
-// }
+function StatusStamp({ announced, revealedAt }: { announced: boolean; revealedAt?: string | null }) {
+  return (
+    <div className={`stamp${announced ? ' announced' : ''}`}>
+      <span className="dot" />
+      {announced ? `Announced${revealedAt ? ` · ${formatRevealedAt(revealedAt)}` : ''}` : 'Sealed'}
+    </div>
+  );
+}
 
-// function TinyThumb({ artist }: { artist: PublicArtist }) {
-//   const [failed, setFailed] = useState(false);
-//   const photoUrl = artistPhotoUrl(artist);
+function TinyThumb({ artist }: { artist: PublicArtist }) {
+  const [failed, setFailed] = useState(false);
+  const photoUrl = artistPhotoUrl(artist);
 
-//   return (
-//     <span className="artist-thumb" title={artist.name}>
-//       {photoUrl && !failed ? (
-//         <img src={photoUrl} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
-//       ) : (
-//         <span>{artistInitial(artist.name)}</span>
-//       )}
-//     </span>
-//   );
-// }
+  return (
+    <span className="artist-thumb" title={artist.name}>
+      {photoUrl && !failed ? (
+        <img src={photoUrl} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      ) : (
+        <span>{artistInitial(artist.name)}</span>
+      )}
+    </span>
+  );
+}
 
 function Lineup({ artists, settings, freshIds }: { artists: PublicArtist[]; settings: Settings | null; freshIds: Set<string> }) {
-  const placeholderSlots = Math.max(0, settings?.artist_placeholders ?? 4);
-  const placeholderCount = Math.max(4, placeholderSlots - artists.length);
+  // A fixed number of silhouettes, independent of how many artists are
+  // revealed — it's a committee-set display count, not the true remaining
+  // number, so it must never shrink as artists unseal (that would turn it
+  // into an accurate countdown, exactly what it's meant not to be).
+  const placeholderCount = Math.min(10, Math.max(0, settings?.artist_placeholders ?? 4));
 
   return (
     <>

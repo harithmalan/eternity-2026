@@ -6,6 +6,7 @@ const LINKS = [
   { to: '/orders', label: 'Orders' },
   { to: '/export', label: 'Export' },
   { to: '/reveals', label: 'Reveals' },
+  { to: '/artists', label: 'Artists' },
   { to: '/features', label: 'Features' },
   { to: '/products', label: 'Products' },
   { to: '/stock', label: 'Stock' },

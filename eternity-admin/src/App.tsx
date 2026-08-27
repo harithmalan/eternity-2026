@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Export from './pages/Export';
 import Reveals from './pages/Reveals';
+import Artists from './pages/Artists';
 import Features from './pages/Features';
 import Products from './pages/Products';
 import Stock from './pages/Stock';
@@ -38,6 +39,7 @@ function Gate() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/export" element={<Export />} />
         <Route path="/reveals" element={<Reveals />} />
+        <Route path="/artists" element={<Artists />} />
         <Route path="/features" element={<Features />} />
         <Route path="/products" element={<Products />} />
         <Route path="/stock" element={<Stock />} />

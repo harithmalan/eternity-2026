@@ -278,7 +278,7 @@ create table settings (
   -- Artists card display-only knobs — NOT derived from how many artist rows
   -- exist or are revealed. `artist_placeholders` is a committee-set guess
   -- at remaining silhouette count, not the true remaining number.
-  artist_placeholders int not null default 4 check (artist_placeholders >= 0),
+  artist_placeholders int not null default 4 check (artist_placeholders between 0 and 10),
   more_artists_coming boolean not null default true
 );
 insert into settings (id) values (1);
