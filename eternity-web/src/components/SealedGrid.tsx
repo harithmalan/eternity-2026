@@ -234,7 +234,7 @@ function TinyThumb({ artist }: { artist: PublicArtist }) {
 
 function Lineup({ artists, settings, freshIds }: { artists: PublicArtist[]; settings: Settings | null; freshIds: Set<string> }) {
   const placeholderSlots = Math.max(0, settings?.artist_placeholders ?? 4);
-  const placeholderCount = Math.max(0, placeholderSlots - artists.length);
+  const placeholderCount = Math.max(4, placeholderSlots - artists.length);
 
   return (
     <>
