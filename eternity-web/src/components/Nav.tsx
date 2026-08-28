@@ -23,6 +23,7 @@ export default function Nav() {
       </div>
       <div className="nav-links">
         <a href="#merch">Merch</a>
+        <Link to="/feed">Latest</Link>
         <a href="#sizes">Size guide</a>
         <a href="#order">Pre-order</a>
         <LockedAction feature="lineup">
@@ -34,7 +35,7 @@ export default function Nav() {
         <a href="#contact">Contact</a>
       </div>
 
-      {user ? <NavAccount /> : <button className="nav-cta" onClick={openSignIn}>Sign in</button>}
+      {user ? <NavAccount /> : <button className="nav-cta" onClick={() => openSignIn()}>Sign in</button>}
     </nav>
   );
 }

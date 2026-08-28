@@ -50,7 +50,8 @@ interface AuthContextValue {
   loading: boolean;
 
   signInPanelOpen: boolean;
-  openSignIn: () => void;
+  signInLede: string;
+  openSignIn: (lede?: string) => void;
   closeSignIn: () => void;
 
   signInWithGoogle: (redirectTo?: string) => Promise<AuthResult>;
@@ -68,6 +69,8 @@ interface AuthContextValue {
   dismissGreeting: () => void;
 }
 
+const DEFAULT_SIGN_IN_LEDE = 'Sign in to reserve your merch.';
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function useAuth(): AuthContextValue {
@@ -81,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [signInPanelOpen, setSignInPanelOpen] = useState(false);
+  const [signInLede, setSignInLede] = useState(DEFAULT_SIGN_IN_LEDE);
   const [pendingGreetName, setPendingGreetName] = useState<string | null | undefined>(undefined);
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -130,7 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadProfile]);
 
-  const openSignIn = useCallback(() => setSignInPanelOpen(true), []);
+  const openSignIn = useCallback((lede?: string) => {
+    setSignInLede(lede ?? DEFAULT_SIGN_IN_LEDE);
+    setSignInPanelOpen(true);
+  }, []);
   const closeSignIn = useCallback(() => setSignInPanelOpen(false), []);
   const dismissGreeting = useCallback(() => setPendingGreetName(undefined), []);
 
@@ -205,6 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     signInPanelOpen,
+    signInLede,
     openSignIn,
     closeSignIn,
     signInWithGoogle,

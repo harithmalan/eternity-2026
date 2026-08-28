@@ -1,11 +1,13 @@
 import { Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
+import FeedPage from './pages/FeedPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SectionPlaceholder from './pages/SectionPlaceholder';
 import { ToastProvider } from './components/Toast';
 import { FeaturesProvider } from './lib/features';
 import { AuthProvider } from './lib/auth';
+import { LikesProvider } from './lib/likes';
 import LockedRoute from './components/LockedRoute';
 import RequireAuth from './components/RequireAuth';
 import Layout from './components/Layout';
@@ -17,6 +19,7 @@ function Routed() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/feed" element={<FeedPage />} />
       <Route
         path="/my-orders"
         element={
@@ -69,10 +72,12 @@ export default function App() {
     <ToastProvider>
       <FeaturesProvider>
         <AuthProvider>
-          <Routed />
-          <SignInPanel />
-          <Greeting />
-          <MerchPopup />
+          <LikesProvider>
+            <Routed />
+            <SignInPanel />
+            <Greeting />
+            <MerchPopup />
+          </LikesProvider>
         </AuthProvider>
       </FeaturesProvider>
     </ToastProvider>

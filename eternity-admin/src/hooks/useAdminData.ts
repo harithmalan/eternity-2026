@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type {
+  AdminPostRow,
   Artist,
   BandAvailability,
   Batch,
@@ -71,6 +72,14 @@ export const useReveals = makeListHook<Reveal>(() =>
 // public view exists specifically to hide the former from everyone else.
 export const useArtists = makeListHook<Artist>(() =>
   supabase.from('artists').select('*').order('sort')
+);
+
+// Reads admin_post_view, not the base `posts` table — the view pre-joins
+// each post's media as a JSON array server-side (see supabase-setup.sql),
+// which sidesteps postgrest embedded-select typing against the generated
+// Database type entirely.
+export const usePosts = makeListHook<AdminPostRow>(() =>
+  supabase.from('admin_post_view').select('*').order('created_at', { ascending: false })
 );
 
 export const useFeatures = makeListHook<Feature>(() =>

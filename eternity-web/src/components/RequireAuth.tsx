@@ -30,7 +30,7 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
       <div className="locked-panel">
         <img className="locked-panel-mark" src="/img/eternity-logo.png" alt="Eternity" />
         <p className="locked-panel-msg">Sign in to continue.</p>
-        <button className="btn btn-gold" onClick={openSignIn}>Sign in</button>
+        <button className="btn btn-gold" onClick={() => openSignIn()}>Sign in</button>
       </div>
     );
   }

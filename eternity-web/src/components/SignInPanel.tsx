@@ -4,7 +4,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import AuthForm from './AuthForm';
 
 export default function SignInPanel() {
-  const { signInPanelOpen, closeSignIn } = useAuth();
+  const { signInPanelOpen, signInLede, closeSignIn } = useAuth();
   const panelRef = useFocusTrap<HTMLDivElement>(signInPanelOpen);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function SignInPanel() {
       <button className="auth-close" onClick={closeSignIn}>Close</button>
       <div className="auth-card">
         <img className="crest-mark" src="/img/eternity-logo.png" alt="Eternity" />
-        <AuthForm lede="Sign in to reserve your merch." />
+        <AuthForm lede={signInLede} />
       </div>
     </div>
   );

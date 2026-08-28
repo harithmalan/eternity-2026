@@ -66,6 +66,13 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (select 1 from profiles where id = auth.uid() and role = 'superadmin');
 $$;
 
+create or replace function set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end $$;
+
 -- "admins manage profiles" (below) lets any admin update any profile row —
 -- fine for fixing a typo'd phone number, not fine for handing someone the
 -- keys. Promotion is a distinct, higher-stakes action, so it gets its own
@@ -234,6 +241,92 @@ end $$;
 create trigger trg_broadcast_artist after insert or update on artists
   for each row execute function broadcast_artist_change();
 
+-- ═══ 4c. POSTS (social feed) ════════════════════════════════════
+create table posts (
+  id uuid primary key default gen_random_uuid(),
+  caption text,
+  is_published boolean not null default false,
+  is_pinned boolean not null default false,
+  like_count int not null default 0,     -- denormalized, see recalc_post_like_count()
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Never the raw upload — the composer downscales/re-encodes client-side
+-- before this row exists at all (see the eternity-admin Posts page).
+-- `poster_path` is required for every video: without one the browser has to
+-- download the whole clip just to paint a first frame, which is the single
+-- most expensive mistake a feed can make.
+create table post_media (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id) on delete cascade,
+  kind text not null check (kind in ('image','video')),
+  path text not null,          -- object path in the `posts` bucket
+  width int,
+  height int,
+  placeholder text,            -- base64 32px-wide WebP blur-up, images only
+  poster_path text,            -- object path in the `posts` bucket, videos only
+  duration_s numeric(6,2),     -- videos only
+  sort int not null default 0,
+  constraint video_requires_poster check (kind <> 'video' or poster_path is not null)
+);
+create index post_media_post_idx on post_media(post_id);
+
+create table post_likes (
+  post_id uuid not null references posts(id) on delete cascade,
+  user_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+create or replace function recalc_post_like_count()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare pid uuid;
+begin
+  pid := coalesce(new.post_id, old.post_id);
+  update posts set like_count = (select count(*) from post_likes where post_id = pid) where id = pid;
+  return null;
+end $$;
+create trigger trg_recalc_post_likes after insert or delete on post_likes
+  for each row execute function recalc_post_like_count();
+
+-- Only one post pinned at a time — pinning a new one silently unpins
+-- whatever was pinned before, in the same transaction, so there's never a
+-- moment with two (or zero, mid-swap) pinned posts.
+create or replace function guard_single_pin()
+returns trigger language plpgsql as $$
+begin
+  if new.is_pinned and not old.is_pinned then
+    update posts set is_pinned = false where is_pinned and id <> new.id;
+  end if;
+  return new;
+end $$;
+create trigger trg_guard_single_pin before update on posts
+  for each row execute function guard_single_pin();
+
+create trigger trg_touch_posts before update on posts
+  for each row execute function set_updated_at();
+
+-- What eternity-web's homepage LATEST section and /feed page both read —
+-- never `posts` directly. Draft posts simply don't have a row here, same
+-- "unpublished never on the wire" shape as public_reveals/public_artists.
+-- `security_invoker = on` (not off): unlike those two, this view doesn't
+-- mask any columns — it only filters rows — and the "read published posts"
+-- / "read media of published posts" policies below already grant a plain
+-- visitor exactly that, so there's nothing to bypass.
+create or replace view public_feed with (security_invoker = on) as
+  select p.id, p.caption, p.is_pinned, p.like_count, p.published_at,
+    (select jsonb_agg(jsonb_build_object(
+        'id', m.id, 'kind', m.kind, 'path', m.path, 'width', m.width, 'height', m.height,
+        'placeholder', m.placeholder, 'poster_path', m.poster_path,
+        'duration_s', m.duration_s, 'sort', m.sort
+      ) order by m.sort)
+     from post_media m where m.post_id = p.id) as media
+  from posts p
+  where p.is_published
+  order by p.is_pinned desc, p.published_at desc, p.id desc;
+
 -- ═══ 5. PRODUCTS ═══════════════════════════════════════════════
 create table products (
   id uuid primary key default gen_random_uuid(),
@@ -279,7 +372,12 @@ create table settings (
   -- exist or are revealed. `artist_placeholders` is a committee-set guess
   -- at remaining silhouette count, not the true remaining number.
   artist_placeholders int not null default 4 check (artist_placeholders between 0 and 10),
-  more_artists_coming boolean not null default true
+  more_artists_coming boolean not null default true,
+  -- Enforced client-side in the composer, before anything uploads — see the
+  -- eternity-admin Posts page.
+  feed_max_video_secs int not null default 30 check (feed_max_video_secs > 0),
+  feed_home_count     int not null default 3 check (feed_home_count >= 0),
+  feed_autoplay       boolean not null default true
 );
 insert into settings (id) values (1);
 
@@ -633,6 +731,22 @@ alter table size_stock enable row level security;
 create policy "admins write size stock" on size_stock for all using (is_admin()) with check (is_admin());
 grant select on size_availability to anon, authenticated;
 
+alter table posts      enable row level security;
+alter table post_media enable row level security;
+alter table post_likes enable row level security;
+
+create policy "admins manage posts" on posts for all using (is_admin()) with check (is_admin());
+create policy "read published posts" on posts for select using (is_published);
+
+create policy "admins manage post media" on post_media for all using (is_admin()) with check (is_admin());
+create policy "read media of published posts" on post_media for select
+  using (exists (select 1 from posts p where p.id = post_media.post_id and p.is_published));
+
+create policy "read post likes"  on post_likes for select using (true);
+create policy "like as self"     on post_likes for insert with check (auth.uid() = user_id);
+create policy "unlike own like"  on post_likes for delete using (auth.uid() = user_id);
+grant select on public_feed to anon, authenticated;
+
 create policy "read own orders"  on orders for select using (auth.uid() = user_id or is_admin());
 create policy "create own order" on orders for insert with check (auth.uid() = user_id);
 create policy "update own order" on orders for update using (auth.uid() = user_id or is_admin());
@@ -656,8 +770,9 @@ create policy "admins retry outbox" on email_outbox for update using (is_admin()
 create policy "admins read audit"  on audit_log    for select using (is_admin());
 
 -- ═══ 10. STORAGE ═══════════════════════════════════════════════
-insert into storage.buckets (id,name,public) values
- ('merch','merch',true), ('slips','slips',false), ('artists','artists',true)
+insert into storage.buckets (id,name,public,file_size_limit) values
+ ('merch','merch',true,null), ('slips','slips',false,null), ('artists','artists',true,null),
+ ('posts','posts',true,26214400)  -- 25MB, enforced by the bucket itself, not just client-side
 on conflict do nothing;
 
 create policy "public reads merch" on storage.objects for select using (bucket_id = 'merch');
@@ -670,6 +785,11 @@ create policy "admins write artist photos" on storage.objects for all
   using (bucket_id = 'artists' and is_admin())
   with check (bucket_id = 'artists' and is_admin());
 
+create policy "public reads post media" on storage.objects for select using (bucket_id = 'posts');
+create policy "admins write post media" on storage.objects for all
+  using (bucket_id = 'posts' and is_admin())
+  with check (bucket_id = 'posts' and is_admin());
+
 -- slips live at  slips/<user_id>/<order_code>.<ext>
 create policy "upload own slip" on storage.objects for insert
   with check (bucket_id = 'slips' and (storage.foldername(name))[1] = auth.uid()::text);
@@ -680,6 +800,24 @@ create policy "replace own slip" on storage.objects for update
   using (bucket_id = 'slips' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- ═══ 11. ADMIN VIEWS (report export) ═══════════════════════════
+-- Feeds the eternity-admin Posts composer/list with each post's media
+-- pre-joined as a JSON array, the same reason admin_order_view exists —
+-- postgrest's embedded selects don't type well against a generated
+-- Database type, so the join happens here instead. `security_invoker = on`
+-- (not off, unlike public_reveals/public_artists): this view is
+-- admin-only, so it should see exactly what the querying admin's own RLS
+-- on posts/post_media already allows — no need to bypass it.
+create or replace view admin_post_view with (security_invoker = on) as
+  select p.*,
+    (select jsonb_agg(jsonb_build_object(
+        'id', m.id, 'kind', m.kind, 'path', m.path, 'width', m.width, 'height', m.height,
+        'placeholder', m.placeholder, 'poster_path', m.poster_path,
+        'duration_s', m.duration_s, 'sort', m.sort
+      ) order by m.sort)
+     from post_media m where m.post_id = p.id) as media
+  from posts p;
+grant select on admin_post_view to authenticated;
+
 create or replace view admin_order_view with (security_invoker = on) as
   select o.code, o.status, o.full_name, o.sa_number, o.batch, o.phone, o.email,
          o.total, o.payment_ref, o.slip_path, o.created_at, o.reviewed_at,

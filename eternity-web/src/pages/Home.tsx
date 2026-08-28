@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Hero from '../components/Hero';
 import SealedGrid from '../components/SealedGrid';
+import LatestSection from '../components/LatestSection';
 import MerchGrid from '../components/MerchGrid';
 import SizeChart from '../components/SizeChart';
 import OrderForm from '../components/OrderForm';
@@ -34,6 +35,7 @@ export default function Home() {
     <Layout>
       <Hero />
       <SealedGrid settings={settings} />
+      <LatestSection settings={settings} />
       <MerchGrid products={products} settings={settings} loading={productsLoading || settingsLoading} />
       <SizeChart sizes={sizes} loading={sizesLoading} />
       <ErrorBoundary>

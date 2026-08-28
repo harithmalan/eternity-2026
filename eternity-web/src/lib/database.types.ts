@@ -39,6 +39,9 @@ export type Settings = {
   bank_branch: string;
   artist_placeholders: number;
   more_artists_coming: boolean;
+  feed_max_video_secs: number;
+  feed_home_count: number;
+  feed_autoplay: boolean;
 };
 
 export type Feature = {
@@ -79,6 +82,34 @@ export type PublicArtist = {
   spotify?: string | null;
   revealed_at: string | null;
   sort: number;
+};
+
+export type PostMediaKind = 'image' | 'video';
+
+export type PostMedia = {
+  id: string;
+  kind: PostMediaKind;
+  path: string;
+  width: number | null;
+  height: number | null;
+  placeholder: string | null;
+  poster_path: string | null;
+  duration_s: number | null;
+  sort: number;
+};
+
+/**
+ * Shape of the `public_feed` VIEW — never `posts`. A draft simply has no
+ * row here, the same "unpublished never on the wire" shape as
+ * public_reveals/public_artists.
+ */
+export type FeedPost = {
+  id: string;
+  caption: string | null;
+  is_pinned: boolean;
+  like_count: number;
+  published_at: string;
+  media: PostMedia[] | null;
 };
 
 export type UserRole = 'user' | 'admin' | 'superadmin';
@@ -140,6 +171,12 @@ export type OrderItem = {
   line_total: number;
 };
 
+export type PostLike = {
+  post_id: string;
+  user_id: string;
+  created_at: string;
+};
+
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -166,10 +203,12 @@ export type Database = {
       profiles: Table<Profile>;
       orders: Table<Order>;
       order_items: Table<OrderItem>;
+      post_likes: Table<PostLike>;
     };
     Views: {
       public_reveals: View<PublicReveal>;
       public_artists: View<PublicArtist>;
+      public_feed: View<FeedPost>;
     };
     Functions: Record<string, never>;
     Enums: Record<string, never>;

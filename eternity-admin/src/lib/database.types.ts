@@ -84,7 +84,37 @@ export type Settings = {
   band_capacity: number;
   artist_placeholders: number;
   more_artists_coming: boolean;
+  feed_max_video_secs: number;
 };
+
+export type PostMediaKind = 'image' | 'video';
+
+export type PostMedia = {
+  id: string;
+  post_id: string;
+  kind: PostMediaKind;
+  path: string;
+  width: number | null;
+  height: number | null;
+  placeholder: string | null;
+  poster_path: string | null;
+  duration_s: number | null;
+  sort: number;
+};
+
+export type Post = {
+  id: string;
+  caption: string | null;
+  is_published: boolean;
+  is_pinned: boolean;
+  like_count: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** `admin_post_view` row — a post with its media pre-joined as JSON. */
+export type AdminPostRow = Post & { media: PostMedia[] | null };
 
 export type SizeChartRow = {
   size: string;
@@ -212,11 +242,14 @@ export type Database = {
       orders: Table<Order>;
       order_items: Table<OrderItem>;
       email_outbox: Table<EmailOutboxRow>;
+      posts: Table<Post>;
+      post_media: Table<PostMedia>;
     };
     Views: {
       size_availability: View<SizeAvailability>;
       band_availability: View<BandAvailability>;
       admin_order_view: View<AdminOrderRow>;
+      admin_post_view: View<AdminPostRow>;
       size_breakdown: View<SizeBreakdownRow>;
       batch_breakdown: View<BatchBreakdownRow>;
       revenue_summary: View<RevenueSummaryRow>;
