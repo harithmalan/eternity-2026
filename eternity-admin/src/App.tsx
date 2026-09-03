@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import SignInScreen from './components/SignInScreen';
 import AccessDenied from './components/AccessDenied';
@@ -14,6 +14,7 @@ import Products from './pages/Products';
 import Stock from './pages/Stock';
 import Emails from './pages/Emails';
 import Members from './pages/Members';
+import Launch from './pages/Launch';
 
 export default function App() {
   return (
@@ -24,7 +25,8 @@ export default function App() {
 }
 
 function Gate() {
-  const { user, loading, accessDenied } = useAuth();
+  const { user, loading, accessDenied, isSuperadmin } = useAuth();
+  const location = useLocation();
 
   // Order matters: accessDenied is checked first and unconditionally —
   // once set, nothing else in this component renders, regardless of what
@@ -32,6 +34,13 @@ function Gate() {
   if (accessDenied) return <AccessDenied />;
   if (loading) return null;
   if (!user) return <SignInScreen />;
+
+  // /launch bypasses the normal Shell entirely — full-bleed, no sidebar
+  // distraction, nothing else clickable while someone's about to press it
+  // on stage. Checked here, before Shell, rather than as a route inside it.
+  if (location.pathname === '/launch') {
+    return isSuperadmin ? <Launch /> : <Navigate to="/" replace />;
+  }
 
   return (
     <Shell>

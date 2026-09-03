@@ -85,6 +85,11 @@ export type Settings = {
   artist_placeholders: number;
   more_artists_coming: boolean;
   feed_max_video_secs: number;
+  feed_home_count: number;
+  feed_autoplay: boolean;
+  launch_state: 'idle' | 'armed' | 'launched';
+  launch_armed_at: string | null;
+  launch_countdown_secs: number;
 };
 
 export type PostMediaKind = 'image' | 'video';
@@ -254,7 +259,12 @@ export type Database = {
       batch_breakdown: View<BatchBreakdownRow>;
       revenue_summary: View<RevenueSummaryRow>;
     };
-    Functions: Record<string, never>;
+    Functions: {
+      set_launch_state: {
+        Args: { new_state: string };
+        Returns: void;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

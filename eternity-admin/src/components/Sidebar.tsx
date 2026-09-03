@@ -41,6 +41,15 @@ export default function Sidebar() {
           </NavLink>
         )}
       </nav>
+      {isSuperadmin && (
+        <div className="sidebar-launch">
+          <div className="sidebar-launch-rule" />
+          <p className="sidebar-launch-label">Launch control</p>
+          <NavLink to="/launch" className="sidebar-link sidebar-launch-link">
+            Launch
+          </NavLink>
+        </div>
+      )}
       <div className="sidebar-foot">
         <p className="sidebar-user">{user?.email}</p>
         <button className="sidebar-signout" onClick={signOut}>Sign out</button>

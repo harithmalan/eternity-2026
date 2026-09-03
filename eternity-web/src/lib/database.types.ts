@@ -42,6 +42,9 @@ export type Settings = {
   feed_max_video_secs: number;
   feed_home_count: number;
   feed_autoplay: boolean;
+  launch_state: 'idle' | 'armed' | 'launched';
+  launch_armed_at: string | null;
+  launch_countdown_secs: number;
 };
 
 export type Feature = {
@@ -86,16 +89,25 @@ export type PublicArtist = {
 
 export type PostMediaKind = 'image' | 'video';
 
+/**
+ * Shape of a media item inside `public_feed.media` — deliberately shorter
+ * keys than the `post_media` table/`admin_post_view` columns (no `id`; `w`/
+ * `h`/`poster`/`duration` instead of `width`/`height`/`poster_path`/
+ * `duration_s`), since this JSON is repeated per item in a paginated public
+ * response and the admin composer's isn't. `path` doubles as a stable React
+ * key — it's a UUID-based filename, unique per item, and there's no `id`
+ * here to use instead. No `sort` either — items already arrive in sort
+ * order from the view's own `jsonb_agg(... order by sort)`, so the client
+ * never needs to re-sort and the key isn't worth repeating per item.
+ */
 export type PostMedia = {
-  id: string;
   kind: PostMediaKind;
   path: string;
-  width: number | null;
-  height: number | null;
+  w: number | null;
+  h: number | null;
   placeholder: string | null;
-  poster_path: string | null;
-  duration_s: number | null;
-  sort: number;
+  poster: string | null;
+  duration: number | null;
 };
 
 /**

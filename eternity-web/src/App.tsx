@@ -14,6 +14,8 @@ import Layout from './components/Layout';
 import SignInPanel from './components/SignInPanel';
 import Greeting from './components/Greeting';
 import MerchPopup from './components/MerchPopup';
+import PresenceBeacon from './components/PresenceBeacon';
+import LaunchGate from './components/LaunchGate';
 
 function Routed() {
   return (
@@ -73,10 +75,12 @@ export default function App() {
       <FeaturesProvider>
         <AuthProvider>
           <LikesProvider>
+            <PresenceBeacon />
             <Routed />
             <SignInPanel />
             <Greeting />
             <MerchPopup />
+            <LaunchGate />
           </LikesProvider>
         </AuthProvider>
       </FeaturesProvider>

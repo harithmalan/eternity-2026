@@ -61,9 +61,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   justify-content: space-between; gap: 24px; padding: 16px calc((100vw - var(--shell)) / 2);
   background: linear-gradient(180deg, rgba(5, 5, 7, .9), rgba(5, 5, 7, 0));
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid transparent; transition: border-color .4s, background .4s;
+  border-bottom: 1px solid transparent; transition: border-color .4s, background .4s, transform .6s cubic-bezier(.2, .9, .3, 1);
 }
 .nav.scrolled { border-bottom-color: var(--line); background: rgba(5, 5, 7, .92); }
+.nav.launch-hidden { transform: translateY(-120%); }
 .nav-marks { display: flex; align-items: center; gap: 14px; }
 .nav-marks img { height: 34px; width: auto; opacity: .92; }
 .nav-marks .uni { height: 20px; opacity: .6; }
@@ -779,6 +780,38 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
 .feed-skel-avatar { width: 28px; height: 28px; border-radius: 50%; flex: none; }
 .feed-skel-line { display: block; height: 9px; }
 .feed-skel-media { display: block; }
+
+/* ── The launch sequence — z-index above everything else on the site,
+   including .greet (200), since only one of these ever happens ─────── */
+.launch-overlay { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; cursor: pointer; overflow: hidden; }
+
+.launch-armed { position: absolute; inset: 0; display: grid; place-items: center; }
+.launch-armed-dim { position: absolute; inset: 0; background: rgba(5, 5, 7, .92); }
+.launch-armed-number {
+  position: relative; z-index: 1; font-family: var(--f-mono); font-weight: 500;
+  font-size: clamp(120px, 26vw, 320px); color: var(--gold); line-height: 1;
+  font-variant-numeric: tabular-nums; text-shadow: 0 0 60px rgba(242, 176, 30, .4);
+}
+.launch-armed-ring {
+  position: absolute; top: 50%; left: 50%; width: 1.35em; height: 1.35em; transform: translate(-50%, -50%);
+  border: 1px solid var(--gold); border-radius: 50%; pointer-events: none;
+}
+
+.launch-cinematic { position: absolute; inset: 0; display: grid; place-items: center; }
+.launch-flash { position: absolute; inset: 0; background: var(--chrome); }
+.launch-void { position: absolute; inset: 0; background: var(--void); }
+.launch-slash {
+  position: absolute; top: 6%; bottom: 6%; left: 50%; width: 3px; margin-left: -1.5px; z-index: 1;
+  background: linear-gradient(180deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent);
+  box-shadow: 0 0 40px 6px rgba(242, 176, 30, .7);
+}
+.launch-mark { z-index: 2; filter: drop-shadow(0 0 80px rgba(242, 176, 30, .35)); }
+.launch-ring {
+  position: absolute; top: 50%; left: 50%; width: min(1200px, 140vw); aspect-ratio: 1; transform: translate(-50%, -50%);
+  border: 1px solid var(--chrome); border-radius: 50%; pointer-events: none;
+}
+
+.launch-reduced { position: absolute; inset: 0; display: grid; place-items: center; background: var(--void); }
 
 @media (prefers-reduced-motion: reduce) {
   *{ animation: none !important; transition-duration: .01ms !important; }

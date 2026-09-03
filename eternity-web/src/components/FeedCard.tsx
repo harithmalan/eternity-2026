@@ -175,7 +175,7 @@ function FeedMedia({ media, autoplay, onDoubleTap }: { media: PostMedia[]; autop
     <div className="feed-media" onClick={handleTap}>
       <div className={`feed-media-scroll${media.length > 1 ? ' multi' : ''}`} ref={scrollRef}>
         {media.map((m) => (
-          <FeedMediaItem key={m.id} item={m} autoplay={autoplay} />
+          <FeedMediaItem key={m.path} item={m} autoplay={autoplay} />
         ))}
       </div>
       {media.length > 1 && (
@@ -201,7 +201,7 @@ function FeedMediaItem({ item, autoplay }: { item: PostMedia; autoplay: boolean 
 function FeedImage({ item }: { item: PostMedia }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '4 / 5';
+  const aspect = item.w && item.h ? `${item.w} / ${item.h}` : '4 / 5';
 
   return (
     <div className="feed-media-frame" style={{ aspectRatio: aspect }}>
@@ -235,8 +235,8 @@ function FeedVideo({ item, autoplay }: { item: PostMedia; autoplay: boolean }) {
   const shouldReduceMotion = !!useReducedMotion();
   const saveData = saveDataOn();
   const canAutoplay = autoplay && !shouldReduceMotion && !saveData;
-  const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '4 / 5';
-  const posterUrl = item.poster_path ? mediaUrl(item.poster_path) : undefined;
+  const aspect = item.w && item.h ? `${item.w} / ${item.h}` : '4 / 5';
+  const posterUrl = item.poster ? mediaUrl(item.poster) : undefined;
 
   useEffect(() => {
     const el = containerRef.current;

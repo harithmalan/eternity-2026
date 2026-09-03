@@ -315,12 +315,18 @@ create trigger trg_touch_posts before update on posts
 -- mask any columns — it only filters rows — and the "read published posts"
 -- / "read media of published posts" policies below already grant a plain
 -- visitor exactly that, so there's nothing to bypass.
+--
+-- Media keys are deliberately short (w/h/poster/duration, no id/sort) —
+-- this JSON repeats per item in a paginated PUBLIC response, unlike
+-- admin_post_view's, which stays on the full column names since the
+-- eternity-admin composer's edit/delete reconciliation depends on `id`
+-- being present there. `path` is what the client keys list items on
+-- instead. Keep both views in sync by hand if the shape changes.
 create or replace view public_feed with (security_invoker = on) as
   select p.id, p.caption, p.is_pinned, p.like_count, p.published_at,
     (select jsonb_agg(jsonb_build_object(
-        'id', m.id, 'kind', m.kind, 'path', m.path, 'width', m.width, 'height', m.height,
-        'placeholder', m.placeholder, 'poster_path', m.poster_path,
-        'duration_s', m.duration_s, 'sort', m.sort
+        'kind', m.kind, 'path', m.path, 'w', m.width, 'h', m.height,
+        'placeholder', m.placeholder, 'poster', m.poster_path, 'duration', m.duration_s
       ) order by m.sort)
      from post_media m where m.post_id = p.id) as media
   from posts p
@@ -377,9 +383,72 @@ create table settings (
   -- eternity-admin Posts page.
   feed_max_video_secs int not null default 30 check (feed_max_video_secs > 0),
   feed_home_count     int not null default 3 check (feed_home_count >= 0),
-  feed_autoplay       boolean not null default true
+  feed_autoplay       boolean not null default true,
+  -- The one-time launch moment. Never written directly — always through
+  -- set_launch_state() below, which is the only thing that enforces legal
+  -- transitions (idle->armed->launched, or either back to idle to
+  -- rehearse). `launch_armed_at` is what every visitor's client computes
+  -- its synchronised countdown from — never the moment their own browser
+  -- happened to receive the realtime event.
+  launch_state         text not null default 'idle' check (launch_state in ('idle','armed','launched')),
+  launch_armed_at      timestamptz,
+  launch_countdown_secs int not null default 5 check (launch_countdown_secs in (3,5,10))
 );
 insert into settings (id) values (1);
+
+-- Only this function may change launch_state — it's the state machine, not
+-- just an RLS gate (admins already have plain UPDATE rights on `settings`,
+-- so this exists to stop a legal-but-wrong write like idle->launched or
+-- launched->armed, not to bypass permissions).
+create or replace function set_launch_state(new_state text)
+returns void language plpgsql security definer set search_path = public as $$
+declare current_state text;
+begin
+  if not is_admin() then
+    raise exception 'Admins only.';
+  end if;
+  if new_state not in ('idle','armed','launched') then
+    raise exception 'Invalid launch state: %', new_state;
+  end if;
+
+  select launch_state into current_state from settings where id = 1;
+
+  if new_state = 'armed' and current_state <> 'idle' then
+    raise exception 'Can only arm from idle (currently %).', current_state;
+  end if;
+  if new_state = 'launched' and current_state <> 'armed' then
+    raise exception 'Can only launch from armed (currently %).', current_state;
+  end if;
+  if new_state = 'idle' and current_state = 'idle' then
+    raise exception 'Already idle.';
+  end if;
+
+  update settings
+  set launch_state = new_state,
+      launch_armed_at = case
+        when new_state = 'armed' then now()
+        when new_state = 'idle'  then null
+        else launch_armed_at
+      end
+  where id = 1;
+end $$;
+revoke all on function set_launch_state(text) from public;
+grant execute on function set_launch_state(text) to authenticated;
+
+-- `settings` is the first table here that needs postgres_changes realtime
+-- rather than the broadcast-masking trick reveals/artists use — it's
+-- already fully public-readable ("read settings" below has no admin
+-- check), so a visitor's own RLS already permits exactly what this would
+-- deliver. No masking needed, so no reason not to use the plain built-in.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'settings'
+  ) then
+    alter publication supabase_realtime add table settings;
+  end if;
+end $$;
 
 create or replace function current_price(p products)
 returns numeric language sql stable as $$
