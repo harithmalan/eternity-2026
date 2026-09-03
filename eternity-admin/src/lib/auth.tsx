@@ -20,6 +20,23 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
 }
 
+// A path only — never a full URL, and never anything containing
+// location.search or location.hash. Building redirectTo from
+// window.location.href let the address bar grow by a full access+refresh
+// token pair on every sign-in attempt (the previous round trip's tokens,
+// still sitting in the hash) until Google started rejecting it as too long.
+function safeNextPath(path?: string | null): string | null {
+  if (!path) return null;
+  if (!path.startsWith('/') || path.startsWith('//')) return null;
+  return path;
+}
+
+function oauthRedirectTo(): string {
+  const path = safeNextPath(window.location.pathname);
+  const base = `${window.location.origin}/auth/callback`;
+  return path && path !== '/' ? `${base}?next=${encodeURIComponent(path)}` : base;
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function useAuth(): AuthContextValue {
@@ -85,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async (): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: oauthRedirectTo() },
     });
     return { error: error?.message ?? null };
   }, []);
@@ -93,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithFacebook = useCallback(async (): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: oauthRedirectTo() },
     });
     return { error: error?.message ?? null };
   }, []);

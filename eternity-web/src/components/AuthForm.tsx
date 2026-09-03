@@ -16,7 +16,7 @@ export default function AuthForm({
 }: {
   lede?: string;
   forgotLede?: string;
-  /** Where OAuth should land after the round trip. Defaults to the current URL ("return to wherever headed"); the gate overrides this to land on home. */
+  /** A path (not a full URL) to return to after the OAuth round trip completes at /auth/callback. Defaults to the current page's path; never pass anything containing search or hash. */
   redirectTo?: string;
 }) {
   const { signInWithGoogle, signInWithFacebook, signInWithEmail, signUpWithEmail, resetPassword } = useAuth();

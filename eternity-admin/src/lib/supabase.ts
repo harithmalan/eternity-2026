@@ -14,7 +14,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // the signed-in admin's own user. There is no service_role key anywhere in
 // this codebase, and there must never be: this is still a browser app, and
 // a leaked service_role key bypasses every RLS policy in the database.
+//
+// flowType: 'pkce' — the implicit flow returns real access+refresh tokens in
+// the URL fragment, where they sit in browser history; PKCE returns a
+// short-lived single-use `?code=` instead, which is also what stops that
+// code from ever accumulating in a `redirectTo` built from the current URL.
 export const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-anon-key'
+  supabaseAnonKey || 'placeholder-anon-key',
+  {
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  }
 );

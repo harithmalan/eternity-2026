@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
 import FeedPage from './pages/FeedPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import SectionPlaceholder from './pages/SectionPlaceholder';
 import { ToastProvider } from './components/Toast';
 import { FeaturesProvider } from './lib/features';
@@ -33,6 +35,7 @@ function Routed() {
         }
       />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route
         path="/lineup"
         element={
@@ -70,6 +73,16 @@ function Routed() {
 }
 
 export default function App() {
+  // Defensive cleanup: a stale bookmarked/cached implicit-flow link (or one
+  // from before this app switched to PKCE) could still land anywhere with
+  // #access_token in the hash. Nothing in this app generates that anymore,
+  // so if it shows up, strip it rather than let it sit in the address bar.
+  useEffect(() => {
+    if (window.location.hash.includes('access_token')) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
   return (
     <ToastProvider>
       <FeaturesProvider>

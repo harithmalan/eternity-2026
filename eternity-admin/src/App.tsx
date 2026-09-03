@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
 import SignInScreen from './components/SignInScreen';
@@ -17,11 +18,27 @@ import Members from './pages/Members';
 import Launch from './pages/Launch';
 
 export default function App() {
+  // Defensive cleanup: a stale bookmarked/cached implicit-flow link (or one
+  // from before this app switched to PKCE) could still land anywhere with
+  // #access_token in the hash. Nothing in this app generates that anymore,
+  // so if it shows up, strip it rather than let it sit in the address bar.
+  useEffect(() => {
+    if (window.location.hash.includes('access_token')) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <Gate />
     </AuthProvider>
   );
+}
+
+function safeNextPath(raw: string | null): string {
+  if (!raw) return '/';
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/';
+  return raw;
 }
 
 function Gate() {
@@ -34,6 +51,14 @@ function Gate() {
   if (accessDenied) return <AccessDenied />;
   if (loading) return null;
   if (!user) return <SignInScreen />;
+
+  // /auth/callback is the fixed URL every OAuth round trip lands on — once
+  // authenticated, bounce straight to wherever the admin actually meant to
+  // be (validated, path-only) rather than leaving it sitting in the address
+  // bar or falling through to the catch-all's plain "/" redirect.
+  if (location.pathname === '/auth/callback') {
+    return <Navigate to={safeNextPath(new URLSearchParams(location.search).get('next'))} replace />;
+  }
 
   // /launch bypasses the normal Shell entirely — full-bleed, no sidebar
   // distraction, nothing else clickable while someone's about to press it

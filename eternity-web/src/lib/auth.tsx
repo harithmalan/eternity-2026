@@ -54,8 +54,9 @@ interface AuthContextValue {
   openSignIn: (lede?: string) => void;
   closeSignIn: () => void;
 
-  signInWithGoogle: (redirectTo?: string) => Promise<AuthResult>;
-  signInWithFacebook: (redirectTo?: string) => Promise<AuthResult>;
+  /** `nextPath` is a path only (e.g. "/feed") — never a full URL, never location.search/hash. */
+  signInWithGoogle: (nextPath?: string) => Promise<AuthResult>;
+  signInWithFacebook: (nextPath?: string) => Promise<AuthResult>;
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
   signUpWithEmail: (email: string, password: string) => Promise<AuthResult & { needsConfirmation: boolean }>;
   resetPassword: (email: string) => Promise<AuthResult>;
@@ -70,6 +71,27 @@ interface AuthContextValue {
 }
 
 const DEFAULT_SIGN_IN_LEDE = 'Sign in to reserve your merch.';
+
+// A path only — never a full URL, and never anything containing
+// location.search or location.hash. Guards against an open-redirect via a
+// crafted "next" and against the exact bug that caused the URL to grow on
+// every OAuth round trip: window.location.href includes whatever the
+// previous round trip left behind (implicit-flow tokens, in the old code).
+function safeNextPath(path?: string | null): string | null {
+  if (!path) return null;
+  if (!path.startsWith('/') || path.startsWith('//')) return null;
+  return path;
+}
+
+// Every OAuth attempt must redirect to this exact, fixed URL — building it
+// from window.location.href (or anything else that can carry a hash/search)
+// is what let the URL grow by a full access+refresh token pair on every
+// sign-in attempt until Google started rejecting it as too long.
+function oauthRedirectTo(nextPath?: string): string {
+  const path = safeNextPath(nextPath) ?? safeNextPath(window.location.pathname);
+  const base = `${window.location.origin}/auth/callback`;
+  return path && path !== '/' ? `${base}?next=${encodeURIComponent(path)}` : base;
+}
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -141,18 +163,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const closeSignIn = useCallback(() => setSignInPanelOpen(false), []);
   const dismissGreeting = useCallback(() => setPendingGreetName(undefined), []);
 
-  const signInWithGoogle = useCallback(async (redirectTo?: string): Promise<AuthResult> => {
+  const signInWithGoogle = useCallback(async (nextPath?: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: redirectTo ?? window.location.href },
+      options: { redirectTo: oauthRedirectTo(nextPath) },
     });
     return { error: error?.message ?? null };
   }, []);
 
-  const signInWithFacebook = useCallback(async (redirectTo?: string): Promise<AuthResult> => {
+  const signInWithFacebook = useCallback(async (nextPath?: string): Promise<AuthResult> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
-      options: { redirectTo: redirectTo ?? window.location.href },
+      options: { redirectTo: oauthRedirectTo(nextPath) },
     });
     return { error: error?.message ?? null };
   }, []);
