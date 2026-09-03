@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import Halo from './Halo';
 import Nav from './Nav';
 import Footer from './Footer';
+import LiveCount from './LiveCount';
 
 const Cosmos = lazy(() => import('../three/Cosmos'));
 
@@ -18,6 +19,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <Nav />
       {children}
       <Footer />
+      <LiveCount />
     </>
   );
 }
