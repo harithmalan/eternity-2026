@@ -13,6 +13,7 @@ import type {
   Reveal,
   Settings,
   SizeAvailability,
+  SizeChartRow,
   SizeStock,
 } from '../lib/database.types';
 
@@ -93,6 +94,10 @@ export const useFeatures = makeListHook<Feature>(() =>
 
 export const useSizeStock = makeListHook<SizeStock>(() =>
   supabase.from('size_stock').select('*').order('size')
+);
+
+export const useSizeChart = makeListHook<SizeChartRow>(() =>
+  supabase.from('size_chart').select('*').order('sort')
 );
 
 export const useSizeAvailability = makeListHook<SizeAvailability>(() =>

@@ -507,8 +507,12 @@ export default function OrderForm({
                     {sizeError ? (
                       <p className="auth-error">Couldn&apos;t load sizes — refresh the page</p>
                     ) : sizesLoading ? (
+                      // Purely a loading placeholder shape — 9 is just today's
+                      // real row count in size_chart, not a cap on how many
+                      // sizes can actually load; the real buttons below always
+                      // come straight from the query, never from this number.
                       <div className="sizes" aria-hidden="true">
-                        {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} width={52} height={38} />)}
+                        {Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} width={52} height={38} />)}
                       </div>
                     ) : (
                       <div className="sizes">

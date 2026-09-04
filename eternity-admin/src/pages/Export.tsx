@@ -1,11 +1,9 @@
 import { createElement, useMemo, useState } from 'react';
 import { EMPTY_FILTERS, useOrders, type OrderFilters } from '../hooks/useOrders';
-import { useBatches, useCenters, useProducts } from '../hooks/useAdminData';
+import { useBatches, useCenters, useProducts, useSizeChart } from '../hooks/useAdminData';
 import OrderFilterBar, { ATTENDEE_LABEL, STATUS_LABEL } from '../components/OrderFilterBar';
 import { downloadBlob, ordersToCsv } from '../lib/csv';
 import type { BatchBreakdownEntry, SizeBreakdownEntry } from '../pdf/OrdersReport';
-
-const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -17,19 +15,25 @@ export default function Export() {
   const { data: batches } = useBatches();
   const { data: centers } = useCenters();
   const { data: products } = useProducts();
+  const { data: sizeChart } = useSizeChart();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
 
   const productNames = useMemo(() => Array.from(new Set(products.map((p) => p.name))), [products]);
 
+  // size_chart.sort is the real, current order — reading it here instead of
+  // a hardcoded list is what keeps this correct whenever sizes are added or
+  // removed (a hardcoded 7-size list already went stale once, silently
+  // mis-sorting the two sizes it didn't know about).
   const sizeBreakdown = useMemo<SizeBreakdownEntry[]>(() => {
+    const order = new Map(sizeChart.map((s) => [s.size, s.sort]));
     const map = new Map<string, number>();
     orders.forEach((o) => o.items_json?.forEach((i) => {
       if (i.size) map.set(i.size, (map.get(i.size) ?? 0) + i.qty);
     }));
     return Array.from(map.entries())
       .map(([size, units]) => ({ size, units }))
-      .sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
-  }, [orders]);
+      .sort((a, b) => (order.get(a.size) ?? 999) - (order.get(b.size) ?? 999));
+  }, [orders, sizeChart]);
 
   const batchBreakdown = useMemo<BatchBreakdownEntry[]>(() => {
     const map = new Map<string, { orders: number; value: number }>();

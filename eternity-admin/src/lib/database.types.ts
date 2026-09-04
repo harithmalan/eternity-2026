@@ -128,7 +128,7 @@ export type SizeChartRow = {
   size: string;
   chest_in: number;
   length_in: number;
-  sleeve_in: number;
+  sleeve_in: number | null;
   fits_chest: string;
   sort: number;
 };

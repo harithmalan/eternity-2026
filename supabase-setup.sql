@@ -473,11 +473,21 @@ returns numeric language sql stable as $$
               then p.early_price else p.regular_price end;
 $$;
 
+-- sleeve_in is nullable — the printer doesn't always supply a sleeve
+-- measurement (true right now: every current size has a null sleeve_in),
+-- and the client hides the Sleeve column entirely rather than show it
+-- half-empty when that's the case.
 create table size_chart (
   size text primary key, chest_in numeric(4,1) not null,
-  length_in numeric(4,1) not null, sleeve_in numeric(4,1) not null,
+  length_in numeric(4,1) not null, sleeve_in numeric(4,1),
   fits_chest text not null, sort int not null
 );
+-- This 7-row/with-sleeve seed is a fresh-install starting point only — the
+-- live table has since grown to 9 rows (3XS and 2XS added below XS) with
+-- real printer measurements and no sleeve figures, entered directly via
+-- eternity-admin rather than through this file. Don't treat this list as
+-- current; pull the real rows from the live table instead of trusting
+-- these numbers, and don't invent 3XS/2XS measurements to fill this in.
 insert into size_chart values
  ('XS',17,26.5,7.5,'32–34',1),('S',18,28,7.8,'34–36',2),('M',20,29,8.2,'38–40',3),
  ('L',22,30,8.6,'42–44',4),('XL',24,31,9.0,'46–48',5),

@@ -21,6 +21,10 @@ export default function SizeChart({ sizes, loading }: { sizes: SizeChartRow[]; l
   const chart = useReveal();
   const [unit, setUnit] = useState<Unit>('in');
   const f = unit === 'in' ? fmtIn : fmtCm;
+  // The printer doesn't always supply a sleeve measurement — show blank
+  // cells for the odd size missing one, but drop the whole column rather
+  // than render it entirely empty when nobody has one at all.
+  const hasSleeve = sizes.some((r) => r.sleeve_in !== null);
 
   return (
     <section className="band band-line band-solid" id="sizes">
@@ -43,16 +47,22 @@ export default function SizeChart({ sizes, loading }: { sizes: SizeChartRow[]; l
           <div className="chart-scroll">
             <table>
               <thead>
-                <tr><th>Size</th><th>Chest (flat)</th><th>Length</th><th>Sleeve</th><th>Fits chest</th></tr>
+                <tr>
+                  <th>Size</th><th>Chest (flat)</th><th>Length</th>
+                  {hasSleeve && <th>Sleeve</th>}
+                  <th>Fits chest</th>
+                </tr>
               </thead>
               <tbody>
                 {loading
-                  ? Array.from({ length: 7 }).map((_, i) => (
+                  ? // Purely a loading placeholder shape — 9 is just today's real
+                    // row count, this has no bearing on which sizes actually load.
+                    Array.from({ length: 9 }).map((_, i) => (
                       <tr key={i} aria-hidden="true">
                         <td><Skeleton width={28} height={14} /></td>
                         <td><Skeleton width={40} height={14} /></td>
                         <td><Skeleton width={40} height={14} /></td>
-                        <td><Skeleton width={40} height={14} /></td>
+                        {hasSleeve && <td><Skeleton width={40} height={14} /></td>}
                         <td><Skeleton width={56} height={14} /></td>
                       </tr>
                     ))
@@ -61,7 +71,7 @@ export default function SizeChart({ sizes, loading }: { sizes: SizeChartRow[]; l
                         <td>{r.size}</td>
                         <td>{f(r.chest_in)}</td>
                         <td>{f(r.length_in)}</td>
-                        <td>{f(r.sleeve_in)}</td>
+                        {hasSleeve && <td>{r.sleeve_in !== null ? f(r.sleeve_in) : '—'}</td>}
                         <td>{fmtFitsChest(r.fits_chest, unit)}</td>
                       </tr>
                     ))}
