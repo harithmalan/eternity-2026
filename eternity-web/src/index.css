@@ -432,7 +432,7 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
   background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
 }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
-.attendee-toggle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.attendee-toggle { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
 .attendee-toggle button {
   font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
   border: 1px solid var(--line); padding: 11px 6px; color: var(--dust); transition: .2s;

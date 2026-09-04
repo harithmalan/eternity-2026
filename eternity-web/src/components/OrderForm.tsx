@@ -382,12 +382,13 @@ export default function OrderForm({
 
                 <div className="field">
                   <label>I am a <span className="req">*</span></label>
+                  {/* A fresh graduate still has an SA/UOB number — they take the
+                      student path below and pick a "Graduate 2026"-style batch
+                      from the existing Batch dropdown instead of a separate
+                      attendee type. */}
                   <div className="attendee-toggle" role="group" aria-label="Attendee type">
                     <button type="button" aria-pressed={attendeeType === 'student'} onClick={() => setAttendeeType('student')}>
                       Current student
-                    </button>
-                    <button type="button" aria-pressed={attendeeType === 'graduate'} onClick={() => setAttendeeType('graduate')}>
-                      Fresh graduate
                     </button>
                     <button type="button" aria-pressed={attendeeType === 'alumni'} onClick={() => setAttendeeType('alumni')}>
                       Alumni

@@ -234,6 +234,7 @@ export type BandAvailability = { cap: number; taken: number };
 
 /** `admin_order_view` VIEW — orders with items pre-joined as text and JSON. */
 export type AdminOrderRow = {
+  id: string;
   code: string;
   status: OrderStatus;
   full_name: string;
@@ -244,16 +245,24 @@ export type AdminOrderRow = {
   center: string;
   phone: string;
   email: string;
+  avatar_url: string | null;
   total: number;
+  subtotal: number;
   payment_ref: string | null;
   slip_path: string | null;
   created_at: string;
+  slip_uploaded_at: string | null;
+  payment_due_at: string;
   reviewed_at: string | null;
+  reviewed_by: string | null;
   ready_at: string | null;
   collected_at: string | null;
   rejection_reason: string | null;
   items: string | null;
   items_json: { product: string; size: string | null; qty: number; unit: number }[] | null;
+  /** Null for every non-alumni order, and for an alumni order not yet approved. */
+  pass_code: string | null;
+  checked_in_at: string | null;
 };
 
 export type SizeBreakdownRow = { size: string; units: number };

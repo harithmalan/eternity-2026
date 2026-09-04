@@ -113,14 +113,21 @@ export default function OrderDrawer({ order, onClose, onChanged }: Props) {
               <Detail label="Name" value={rendered.full_name} />
               <Detail label="Attendee type" value={ATTENDEE_LABEL[rendered.attendee_type]} />
               {rendered.attendee_type === 'alumni' ? (
-                <Detail label="NIC" value={rendered.nic ?? '—'} />
+                <>
+                  <Detail label="NIC" value={rendered.nic ?? '—'} />
+                  <Detail label="Entry pass" value={rendered.pass_code ?? 'Not issued yet'} />
+                  <Detail
+                    label="Checked in"
+                    value={rendered.checked_in_at ? new Date(rendered.checked_in_at).toLocaleString('en-LK') : 'Not yet'}
+                  />
+                </>
               ) : (
                 <>
                   <Detail label="SA / UOB number" value={rendered.sa_number ?? '—'} />
                   <Detail label="Batch" value={rendered.batch ?? '—'} />
                 </>
               )}
-              <Detail label="Center" value={rendered.center} />
+              <Detail label="Center" value={rendered.center ?? '—'} />
               <Detail label="Phone" value={rendered.phone} />
               <Detail label="Email" value={rendered.email} />
               <Detail label="Items" value={rendered.items ?? '—'} />

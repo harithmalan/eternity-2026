@@ -28,6 +28,7 @@ create table profiles (
   sa_number   text,          -- SA / UOB number
   batch       text,
   center      text,          -- last center picked at order time — prefills the form, no FK (same as batch above)
+  attendee_type attendee_type not null default 'student',
   avatar_url  text,
   role        user_role not null default 'user',
   created_at  timestamptz not null default now()
@@ -103,7 +104,11 @@ insert into batches values
  ('HD IT Y1S2',6),('HD BM Y1S2',7),('HD EE Y1S2',8),
  ('HD IT Y2S1',9),('HD BM Y2S1',10),('HD EE Y2S1',11),
  ('HD IT Y2S2',12),('HD BM Y2S2',13),('HD EE Y2S2',14),
- ('UOB S1',15),('UOB S2',16);
+ ('UOB S1',15),('UOB S2',16),
+ -- A fresh graduate still has an SA/UOB number, so they take the student
+ -- path (SA number + batch + center) and pick one of these instead of
+ -- getting a separate attendee type of their own.
+ ('Graduate 2026',20),('Graduate 2025',21),('Graduate 2024',22);
 
 -- Every order carries one, regardless of attendee type — same code-as-label
 -- shape as batches above, no separate display-name column needed.

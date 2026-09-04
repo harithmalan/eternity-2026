@@ -100,7 +100,7 @@ export default function Orders() {
                   <td className="emphasis">{o.code}</td>
                   <td style={{ color: 'var(--chrome)' }}>{o.full_name}</td>
                   <td>{ATTENDEE_LABEL[o.attendee_type]}</td>
-                  <td>{o.attendee_type === 'alumni' ? o.center : `${o.batch} · ${o.center}`}</td>
+                  <td>{o.attendee_type === 'alumni' ? o.center ?? '—' : `${o.batch ?? '—'} · ${o.center ?? '—'}`}</td>
                   <td style={{ whiteSpace: 'normal', maxWidth: 240 }}>{o.items ?? '—'}</td>
                   <td>Rs {Number(o.total).toLocaleString('en-LK')}</td>
                   <td><span className="badge badge-done">{STATUS_LABEL[o.status]}</span></td>
