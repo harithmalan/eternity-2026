@@ -17,12 +17,15 @@ export type Profile = {
   phone: string | null;
   sa_number: string | null;
   batch: string | null;
+  center: string | null;
   avatar_url: string | null;
   role: UserRole;
   created_at: string;
 };
 
 export type Batch = { code: string; sort: number };
+export type Center = { code: string; sort: number };
+export type AttendeeType = 'student' | 'graduate' | 'alumni';
 
 export type Feature = {
   key: string;
@@ -147,9 +150,12 @@ export type Order = {
   code: string;
   status: OrderStatus;
   full_name: string;
-  sa_number: string;
+  attendee_type: AttendeeType;
+  sa_number: string | null;
   phone: string;
-  batch: string;
+  batch: string | null;
+  nic: string | null;
+  center: string;
   email: string;
   subtotal: number;
   total: number;
@@ -164,6 +170,29 @@ export type Order = {
   payment_due_at: string;
   created_at: string;
   updated_at: string;
+};
+
+export type Pass = {
+  id: string;
+  order_id: string;
+  user_id: string;
+  checked_in_at: string | null;
+  checked_in_by: string | null;
+  void_reason: string | null;
+  created_at: string;
+};
+
+/** `gate_manifest` VIEW — everything a gate device needs to resolve a scan offline. */
+export type GateManifestRow = {
+  pass_id: string;
+  order_code: string;
+  full_name: string;
+  center: string;
+  phone: string;
+  photo_url: string | null;
+  checked_in_at: string | null;
+  checked_in_by_name: string | null;
+  void_reason: string | null;
 };
 
 export type OrderItem = {
@@ -208,8 +237,11 @@ export type AdminOrderRow = {
   code: string;
   status: OrderStatus;
   full_name: string;
-  sa_number: string;
-  batch: string;
+  attendee_type: AttendeeType;
+  sa_number: string | null;
+  batch: string | null;
+  nic: string | null;
+  center: string;
   phone: string;
   email: string;
   total: number;
@@ -237,6 +269,7 @@ export type Database = {
     Tables: {
       profiles: Table<Profile>;
       batches: Table<Batch>;
+      centers: Table<Center>;
       features: Table<Feature>;
       reveals: Table<Reveal>;
       artists: Table<Artist>;
@@ -246,6 +279,7 @@ export type Database = {
       size_stock: Table<SizeStock>;
       orders: Table<Order>;
       order_items: Table<OrderItem>;
+      passes: Table<Pass>;
       email_outbox: Table<EmailOutboxRow>;
       posts: Table<Post>;
       post_media: Table<PostMedia>;
@@ -254,6 +288,7 @@ export type Database = {
       size_availability: View<SizeAvailability>;
       band_availability: View<BandAvailability>;
       admin_order_view: View<AdminOrderRow>;
+      gate_manifest: View<GateManifestRow>;
       admin_post_view: View<AdminPostRow>;
       size_breakdown: View<SizeBreakdownRow>;
       batch_breakdown: View<BatchBreakdownRow>;
@@ -263,6 +298,10 @@ export type Database = {
       set_launch_state: {
         Args: { new_state: string };
         Returns: void;
+      };
+      check_in_pass: {
+        Args: { p_pass_id: string; p_checked_in_at?: string };
+        Returns: { out_pass_id: string; already_checked_in: boolean; out_checked_in_at: string; out_checked_in_by: string | null }[];
       };
     };
     Enums: Record<string, never>;

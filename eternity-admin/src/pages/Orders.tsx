@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { EMPTY_FILTERS, useOrders, type OrderFilters } from '../hooks/useOrders';
-import { useBatches, useProducts } from '../hooks/useAdminData';
+import { useBatches, useCenters, useProducts } from '../hooks/useAdminData';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import OrderDrawer from '../components/OrderDrawer';
-import OrderFilterBar, { STATUS_LABEL } from '../components/OrderFilterBar';
+import OrderFilterBar, { ATTENDEE_LABEL, STATUS_LABEL } from '../components/OrderFilterBar';
 import type { AdminOrderRow } from '../lib/database.types';
 
 export default function Orders() {
   const [filters, setFilters] = useState<OrderFilters>(EMPTY_FILTERS);
   const { orders, loading, refetch } = useOrders(filters);
   const { data: batches } = useBatches();
+  const { data: centers } = useCenters();
   const { data: products } = useProducts();
   const { confirm, dialog } = useConfirmDialog();
 
@@ -58,7 +59,7 @@ export default function Orders() {
         </div>
       </div>
 
-      <OrderFilterBar filters={filters} setFilters={setFilters} batches={batches} productNames={productNames} />
+      <OrderFilterBar filters={filters} setFilters={setFilters} batches={batches} centers={centers} productNames={productNames} />
 
       {selected.size > 0 && (
         <div className="table-toolbar" style={{ marginTop: -6 }}>
@@ -82,7 +83,8 @@ export default function Orders() {
                 </th>
                 <th>Code</th>
                 <th>Name</th>
-                <th>Batch</th>
+                <th>Type</th>
+                <th>Batch / Center</th>
                 <th>Items</th>
                 <th>Total</th>
                 <th>Status</th>
@@ -97,7 +99,8 @@ export default function Orders() {
                   </td>
                   <td className="emphasis">{o.code}</td>
                   <td style={{ color: 'var(--chrome)' }}>{o.full_name}</td>
-                  <td>{o.batch}</td>
+                  <td>{ATTENDEE_LABEL[o.attendee_type]}</td>
+                  <td>{o.attendee_type === 'alumni' ? o.center : `${o.batch} · ${o.center}`}</td>
                   <td style={{ whiteSpace: 'normal', maxWidth: 240 }}>{o.items ?? '—'}</td>
                   <td>Rs {Number(o.total).toLocaleString('en-LK')}</td>
                   <td><span className="badge badge-done">{STATUS_LABEL[o.status]}</span></td>

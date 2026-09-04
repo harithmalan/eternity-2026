@@ -6,13 +6,16 @@ function csvEscape(value: unknown): string {
   return s;
 }
 
+// NIC is deliberately never included here — it's collected only for pass
+// issuance and is meant to stay in the drawer's per-order view, not ride
+// along in a CSV that gets forwarded, printed, or left on a desk.
 export function ordersToCsv(orders: AdminOrderRow[]): string {
   const headers = [
-    'Code', 'Status', 'Name', 'SA Number', 'Batch', 'Phone', 'Email',
+    'Code', 'Status', 'Name', 'Attendee Type', 'SA Number', 'Batch', 'Center', 'Phone', 'Email',
     'Total', 'Items', 'Reserved At', 'Reviewed At', 'Ready At', 'Collected At', 'Rejection Reason',
   ];
   const rows = orders.map((o) => [
-    o.code, o.status, o.full_name, o.sa_number, o.batch, o.phone, o.email,
+    o.code, o.status, o.full_name, o.attendee_type, o.sa_number ?? '', o.batch ?? '', o.center, o.phone, o.email,
     o.total, o.items ?? '', o.created_at, o.reviewed_at ?? '', o.ready_at ?? '', o.collected_at ?? '', o.rejection_reason ?? '',
   ]);
   return [headers, ...rows].map((r) => r.map(csvEscape).join(',')).join('\r\n');

@@ -29,6 +29,13 @@ export type Batch = {
   sort: number;
 };
 
+export type Center = {
+  code: string;
+  sort: number;
+};
+
+export type AttendeeType = 'student' | 'graduate' | 'alumni';
+
 export type Settings = {
   id: number;
   early_bird_ends_at: string;
@@ -133,6 +140,7 @@ export type Profile = {
   phone: string | null;
   sa_number: string | null;
   batch: string | null;
+  center: string | null;
   avatar_url: string | null;
   role: UserRole;
   created_at: string;
@@ -153,9 +161,12 @@ export type Order = {
   code: string;
   status: OrderStatus;
   full_name: string;
-  sa_number: string;
+  attendee_type: AttendeeType;
+  sa_number: string | null;
   phone: string;
-  batch: string;
+  batch: string | null;
+  nic: string | null;
+  center: string;
   email: string;
   subtotal: number;
   total: number;
@@ -170,6 +181,14 @@ export type Order = {
   payment_due_at: string;
   created_at: string;
   updated_at: string;
+};
+
+export type Pass = {
+  id: string;
+  order_id: string;
+  user_id: string;
+  checked_in_at: string | null;
+  created_at: string;
 };
 
 export type OrderItem = {
@@ -210,11 +229,13 @@ export type Database = {
       products: Table<Product>;
       size_chart: Table<SizeChartRow>;
       batches: Table<Batch>;
+      centers: Table<Center>;
       settings: Table<Settings>;
       features: Table<Feature>;
       profiles: Table<Profile>;
       orders: Table<Order>;
       order_items: Table<OrderItem>;
+      passes: Table<Pass>;
       post_likes: Table<PostLike>;
     };
     Views: {

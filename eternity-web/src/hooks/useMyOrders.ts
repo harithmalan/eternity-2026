@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Order, OrderItem } from '../lib/database.types';
+import type { Order, OrderItem, Pass } from '../lib/database.types';
 
 export interface OrderWithItems extends Order {
   items: OrderItem[];
+  /** Null for every non-alumni order, and for an alumni order not yet approved — RLS already scopes this to rows the signed-in user owns. */
+  pass: Pass | null;
 }
 
 export function useMyOrders(userId: string | undefined) {
@@ -32,10 +34,11 @@ export function useMyOrders(userId: string | undefined) {
       return;
     }
 
-    const { data: itemRows } = await supabase
-      .from('order_items')
-      .select('*')
-      .in('order_id', orderRows.map((o) => o.id));
+    const orderIds = orderRows.map((o) => o.id);
+    const [{ data: itemRows }, { data: passRows }] = await Promise.all([
+      supabase.from('order_items').select('*').in('order_id', orderIds),
+      supabase.from('passes').select('*').in('order_id', orderIds),
+    ]);
 
     const itemsByOrder = new Map<string, OrderItem[]>();
     (itemRows ?? []).forEach((item) => {
@@ -44,7 +47,10 @@ export function useMyOrders(userId: string | undefined) {
       itemsByOrder.set(item.order_id, list);
     });
 
-    setOrders(orderRows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] })));
+    const passByOrder = new Map<string, Pass>();
+    (passRows ?? []).forEach((pass) => passByOrder.set(pass.order_id, pass));
+
+    setOrders(orderRows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [], pass: passByOrder.get(o.id) ?? null })));
     setLoading(false);
   }, [userId]);
 

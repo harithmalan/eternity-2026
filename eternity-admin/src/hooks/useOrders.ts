@@ -5,13 +5,14 @@ import type { AdminOrderRow, OrderStatus } from '../lib/database.types';
 export interface OrderFilters {
   status: OrderStatus | '';
   batch: string;
+  center: string;
   product: string;
   from: string; // yyyy-mm-dd
   to: string; // yyyy-mm-dd
   search: string;
 }
 
-export const EMPTY_FILTERS: OrderFilters = { status: '', batch: '', product: '', from: '', to: '', search: '' };
+export const EMPTY_FILTERS: OrderFilters = { status: '', batch: '', center: '', product: '', from: '', to: '', search: '' };
 
 export function useOrders(filters: OrderFilters) {
   const [orders, setOrders] = useState<AdminOrderRow[]>([]);
@@ -22,6 +23,7 @@ export function useOrders(filters: OrderFilters) {
 
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.batch) query = query.eq('batch', filters.batch);
+    if (filters.center) query = query.eq('center', filters.center);
     if (filters.from) query = query.gte('created_at', `${filters.from}T00:00:00`);
     if (filters.to) query = query.lte('created_at', `${filters.to}T23:59:59`);
     if (filters.search.trim()) {
@@ -41,7 +43,7 @@ export function useOrders(filters: OrderFilters) {
 
     setOrders(rows);
     setLoading(false);
-  }, [filters.status, filters.batch, filters.product, filters.from, filters.to, filters.search]);
+  }, [filters.status, filters.batch, filters.center, filters.product, filters.from, filters.to, filters.search]);
 
   useEffect(() => {
     setLoading(true);

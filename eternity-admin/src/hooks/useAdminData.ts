@@ -5,6 +5,7 @@ import type {
   Artist,
   BandAvailability,
   Batch,
+  Center,
   EmailOutboxRow,
   Feature,
   Product,
@@ -61,6 +62,10 @@ export const useProducts = makeListHook<Product>(() =>
 
 export const useBatches = makeListHook<Batch>(() =>
   supabase.from('batches').select('*').order('sort')
+);
+
+export const useCenters = makeListHook<Center>(() =>
+  supabase.from('centers').select('*').order('sort')
 );
 
 export const useReveals = makeListHook<Reveal>(() =>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { ATTENDEE_LABEL } from './OrderFilterBar';
 import type { AdminOrderRow, Order } from '../lib/database.types';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -110,10 +111,18 @@ export default function OrderDrawer({ order, onClose, onChanged }: Props) {
             <p className="eyebrow" style={{ marginBottom: 12 }}>Order details</p>
             <dl style={{ margin: 0, fontSize: 13 }}>
               <Detail label="Name" value={rendered.full_name} />
-              <Detail label="SA / UOB number" value={rendered.sa_number} />
+              <Detail label="Attendee type" value={ATTENDEE_LABEL[rendered.attendee_type]} />
+              {rendered.attendee_type === 'alumni' ? (
+                <Detail label="NIC" value={rendered.nic ?? '—'} />
+              ) : (
+                <>
+                  <Detail label="SA / UOB number" value={rendered.sa_number ?? '—'} />
+                  <Detail label="Batch" value={rendered.batch ?? '—'} />
+                </>
+              )}
+              <Detail label="Center" value={rendered.center} />
               <Detail label="Phone" value={rendered.phone} />
               <Detail label="Email" value={rendered.email} />
-              <Detail label="Batch" value={rendered.batch} />
               <Detail label="Items" value={rendered.items ?? '—'} />
               <Detail label="Total" value={`Rs ${Number(rendered.total).toLocaleString('en-LK')}`} emphasis />
               <Detail label="Reserved" value={new Date(rendered.created_at).toLocaleString('en-LK')} />

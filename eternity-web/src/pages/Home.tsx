@@ -10,13 +10,14 @@ import OrderForm from '../components/OrderForm';
 import ErrorBoundary from '../components/ErrorBoundary';
 import Steps from '../components/Steps';
 import Contacts from '../components/Contacts';
-import { useBatches, useProducts, useSettings, useSizeChart } from '../hooks/useEternityData';
+import { useBatches, useCenters, useProducts, useSettings, useSizeChart } from '../hooks/useEternityData';
 
 export default function Home() {
   const { products, loading: productsLoading } = useProducts();
   const { settings, loading: settingsLoading } = useSettings();
   const { sizes, loading: sizesLoading } = useSizeChart();
   const { batches, loading: batchesLoading } = useBatches();
+  const { centers, loading: centersLoading } = useCenters();
   const location = useLocation();
 
   // A "Choose the X" card or a cross-page "Pre-order merch" link lands here
@@ -43,9 +44,11 @@ export default function Home() {
           products={products}
           settings={settings}
           batches={batches}
+          centers={centers}
           productsLoading={productsLoading}
           settingsLoading={settingsLoading}
           batchesLoading={batchesLoading}
+          centersLoading={centersLoading}
         />
       </ErrorBoundary>
       <Steps />

@@ -128,7 +128,7 @@ export default function OrdersReport({ orders, sizeBreakdown, batchBreakdown, fi
         <View style={styles.thRow} fixed>
           <Text style={[styles.th, { width: '13%' }]}>Code</Text>
           <Text style={[styles.th, { width: '18%' }]}>Name</Text>
-          <Text style={[styles.th, { width: '14%' }]}>Batch</Text>
+          <Text style={[styles.th, { width: '14%' }]}>Batch / Center</Text>
           <Text style={[styles.th, { width: '25%' }]}>Items</Text>
           <Text style={[styles.th, { width: '10%' }]}>Total</Text>
           <Text style={[styles.th, { width: '12%' }]}>Status</Text>
@@ -138,7 +138,7 @@ export default function OrdersReport({ orders, sizeBreakdown, batchBreakdown, fi
           <View style={styles.tr} key={o.code} wrap={false}>
             <Text style={[styles.tdEmph, { width: '13%' }]}>{o.code}</Text>
             <Text style={[styles.td, { width: '18%' }]}>{o.full_name}</Text>
-            <Text style={[styles.td, { width: '14%' }]}>{o.batch}</Text>
+            <Text style={[styles.td, { width: '14%' }]}>{o.batch ?? o.center}</Text>
             <Text style={[styles.td, { width: '25%' }]}>{o.items ?? '—'}</Text>
             <Text style={[styles.td, { width: '10%' }]}>{money(Number(o.total))}</Text>
             <Text style={[styles.td, { width: '12%' }]}>{STATUS_LABEL[o.status] ?? o.status}</Text>

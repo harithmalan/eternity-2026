@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from './Toast';
@@ -7,10 +8,15 @@ import PaymentCountdown from './PaymentCountdown';
 import Skeleton from './Skeleton';
 import { useMagnetic } from '../hooks/usePointerFx';
 import { useReveal } from '../hooks/useReveal';
-import type { Batch, Product, Settings } from '../lib/database.types';
+import type { AttendeeType, Batch, Center, Product, Settings } from '../lib/database.types';
 
 const PHONE_RE = /^(?:0|\+94)7\d{8}$/;
+const NIC_RE = /^(?:\d{9}[VX]|\d{12})$/;
 const DRAFT_KEY = 'eternity:draft';
+
+function normalizeNic(raw: string): string {
+  return raw.replace(/\s+/g, '').toUpperCase();
+}
 
 interface SizeOption {
   size: string;
@@ -24,10 +30,13 @@ interface OrderResult {
 }
 
 interface Draft {
+  attendeeType: AttendeeType;
   fullName: string;
   saNumber: string;
-  phone: string;
   batch: string;
+  nic: string;
+  center: string;
+  phone: string;
   productSlug: string;
   size: string | null;
   qty: number;
@@ -41,36 +50,61 @@ export default function OrderForm({
   products,
   settings,
   batches,
+  centers,
   productsLoading,
   settingsLoading,
   batchesLoading,
+  centersLoading,
 }: {
   products: Product[];
   settings: Settings | null;
   batches: Batch[];
+  centers: Center[];
   productsLoading: boolean;
   settingsLoading: boolean;
   batchesLoading: boolean;
+  centersLoading: boolean;
 }) {
   // The bank panel is static, data-wise it only needs `settings` — it must
   // never wait on the form panel's own dependencies (products, batches,
   // sizes), so a slow or failed fetch on that side can't take it down too.
-  const formLoading = productsLoading || batchesLoading;
+  const formLoading = productsLoading || batchesLoading || centersLoading;
   const { user, profile, saveProfile, signInWithGoogle } = useAuth();
   const { say } = useToast();
   const [searchParams] = useSearchParams();
   const formReveal = useReveal();
   const bankReveal = useReveal(1);
   const submitBtn = useMagnetic<HTMLButtonElement>();
+  const shouldReduceMotion = !!useReducedMotion();
 
+  const [attendeeType, setAttendeeType] = useState<AttendeeType>('student');
   const [fullName, setFullName] = useState('');
   const [saNumber, setSaNumber] = useState('');
-  const [phone, setPhone] = useState('');
   const [batch, setBatch] = useState('');
+  const [nic, setNic] = useState('');
+  const [nicTouched, setNicTouched] = useState(false);
+  const [center, setCenter] = useState('Colombo');
+  const [phone, setPhone] = useState('');
   const [productSlug, setProductSlug] = useState('combo');
   const [size, setSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [phoneTouched, setPhoneTouched] = useState(false);
+
+  // Switching attendee type must never let a value from the vanished field
+  // group ride along — a leftover SA number can never reach the DB behind
+  // an alumni order, not even for the instant before the next render.
+  useEffect(() => {
+    if (attendeeType === 'alumni') {
+      setSaNumber('');
+      setBatch('');
+    } else {
+      setNic('');
+      setNicTouched(false);
+    }
+  }, [attendeeType]);
+
+  const nicNormalized = normalizeNic(nic);
+  const nicValid = NIC_RE.test(nicNormalized);
 
   const [sizes, setSizes] = useState<SizeOption[]>([]);
   const [sizesLoading, setSizesLoading] = useState(true);
@@ -131,10 +165,13 @@ export default function OrderForm({
     sessionStorage.removeItem(DRAFT_KEY);
     try {
       const draft = JSON.parse(raw) as Draft;
+      setAttendeeType(draft.attendeeType ?? 'student');
       setFullName(draft.fullName ?? '');
       setSaNumber(draft.saNumber ?? '');
-      setPhone(draft.phone ?? '');
       setBatch(draft.batch ?? '');
+      setNic(draft.nic ?? '');
+      setCenter(draft.center || 'Colombo');
+      setPhone(draft.phone ?? '');
       setProductSlug(draft.productSlug ?? 'combo');
       setSize(draft.size ?? null);
       setQty(draft.qty ?? 1);
@@ -154,6 +191,7 @@ export default function OrderForm({
     setSaNumber(profile.sa_number ?? '');
     setPhone(profile.phone ?? '');
     setBatch(profile.batch ?? '');
+    setCenter(profile.center || 'Colombo');
   }, [profile]);
 
   const product = useMemo(() => products.find((p) => p.slug === productSlug), [products, productSlug]);
@@ -179,7 +217,22 @@ export default function OrderForm({
     setSubmitError(null);
 
     if (!product) return;
-    if (!fullName.trim() || !saNumber.trim() || !batch) {
+    if (!fullName.trim() || !center) {
+      setSubmitError('Fill in every field before reserving.');
+      return;
+    }
+    if (attendeeType === 'alumni') {
+      if (!nicNormalized) {
+        setNicTouched(true);
+        setSubmitError('Enter your NIC to reserve as alumni.');
+        return;
+      }
+      if (!nicValid) {
+        setNicTouched(true);
+        setSubmitError('Enter a valid NIC — 9 digits + V/X, or 12 digits.');
+        return;
+      }
+    } else if (!saNumber.trim() || !batch) {
       setSubmitError('Fill in every field before reserving.');
       return;
     }
@@ -198,17 +251,20 @@ export default function OrderForm({
     // draft-restore effect above puts it all back the moment they land here.
     if (!user) {
       const draft: Draft = {
+        attendeeType,
         fullName: fullName.trim(),
         saNumber: saNumber.trim(),
-        phone: phone.trim(),
         batch,
+        nic,
+        center,
+        phone: phone.trim(),
         productSlug,
         size,
         qty,
       };
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       setSubmitting(true);
-      const { error } = await signInWithGoogle(`${window.location.origin}/#order`);
+      const { error } = await signInWithGoogle('/#order');
       if (error) {
         sessionStorage.removeItem(DRAFT_KEY);
         setSubmitError(error);
@@ -218,7 +274,13 @@ export default function OrderForm({
     }
 
     setSubmitting(true);
-    await saveProfile({ full_name: fullName.trim(), sa_number: saNumber.trim(), phone: phone.trim(), batch });
+    await saveProfile({
+      full_name: fullName.trim(),
+      sa_number: saNumber.trim() || null,
+      phone: phone.trim(),
+      batch: batch || null,
+      center,
+    });
 
     let orderId = pendingOrderId.current;
     if (!orderId) {
@@ -227,9 +289,12 @@ export default function OrderForm({
         .insert({
           user_id: user.id,
           full_name: fullName.trim(),
-          sa_number: saNumber.trim(),
+          attendee_type: attendeeType,
+          sa_number: attendeeType === 'alumni' ? null : saNumber.trim(),
+          batch: attendeeType === 'alumni' ? null : batch,
+          nic: attendeeType === 'alumni' ? nicNormalized : null,
+          center,
           phone: phone.trim(),
-          batch,
           email: user.email ?? '',
         })
         .select('id')
@@ -300,6 +365,11 @@ export default function OrderForm({
                 <span>Total to deposit</span>
                 <strong>Rs {orderResult.total.toLocaleString('en-LK')}</strong>
               </div>
+              {attendeeType === 'alumni' && (
+                <div className="warn">
+                  Your Eternity tee is your invitation. Once we verify your deposit, an entry pass appears here — bring it on your phone on the 18th.
+                </div>
+              )}
               <Link className="btn btn-gold magnetic" style={{ width: '100%', marginTop: 20, textAlign: 'center' }} to="/my-orders">
                 Upload your slip
               </Link>
@@ -311,19 +381,30 @@ export default function OrderForm({
                 <p className="hint">Please fill these correctly — we use them to find you at collection.</p>
 
                 <div className="field">
-                  <label>Full name <span className="req">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="As it appears on your student record"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                  />
+                  <label>I am a <span className="req">*</span></label>
+                  <div className="attendee-toggle" role="group" aria-label="Attendee type">
+                    <button type="button" aria-pressed={attendeeType === 'student'} onClick={() => setAttendeeType('student')}>
+                      Current student
+                    </button>
+                    <button type="button" aria-pressed={attendeeType === 'graduate'} onClick={() => setAttendeeType('graduate')}>
+                      Fresh graduate
+                    </button>
+                    <button type="button" aria-pressed={attendeeType === 'alumni'} onClick={() => setAttendeeType('alumni')}>
+                      Alumni
+                    </button>
+                  </div>
                 </div>
+
                 <div className="field-row">
                   <div className="field">
-                    <label>SA / UOB number <span className="req">*</span></label>
-                    <input type="text" required placeholder="SA00000" value={saNumber} onChange={(e) => setSaNumber(e.target.value)} />
+                    <label>Full name <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="As it appears on your student record"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
                   </div>
                   <div className="field">
                     <label>Contact number <span className="req">*</span></label>
@@ -340,13 +421,75 @@ export default function OrderForm({
                     )}
                   </div>
                 </div>
-                <div className="field">
-                  <label>Batch <span className="req">*</span></label>
-                  <select required value={batch} onChange={(e) => setBatch(e.target.value)}>
-                    <option value="" disabled>Select your batch</option>
-                    {batches.map((b) => <option key={b.code} value={b.code}>{b.code}</option>)}
-                  </select>
-                </div>
+
+                <AnimatePresence initial={false}>
+                  {attendeeType === 'alumni' ? (
+                    <motion.div
+                      key="alumni-fields"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: shouldReduceMotion ? 0 : 0.22 }}
+                    >
+                      <div className="field">
+                        <label>NIC <span className="req">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="912345678V"
+                          value={nic}
+                          onChange={(e) => setNic(e.target.value)}
+                          onBlur={() => setNicTouched(true)}
+                        />
+                        <p className="field-helper">Old format 912345678V or new format 199123456789</p>
+                        {nicTouched && nic && !nicValid && (
+                          <p className="avail-warn" style={{ color: 'var(--dust)' }}>Enter a valid NIC — 9 digits + V/X, or 12 digits.</p>
+                        )}
+                        <p className="field-privacy-note">
+                          Alumni have no student ID, so we use this to issue your entry pass. It is visible only to
+                          the committee and is deleted after the event.
+                        </p>
+                      </div>
+                      <div className="field">
+                        <label>Center <span className="req">*</span></label>
+                        <select required value={center} onChange={(e) => setCenter(e.target.value)}>
+                          <option value="" disabled>Select your center</option>
+                          {centers.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                        </select>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="student-fields"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: shouldReduceMotion ? 0 : 0.22 }}
+                    >
+                      <div className="field-row">
+                        <div className="field">
+                          <label>SA / UOB number <span className="req">*</span></label>
+                          <input type="text" required placeholder="SA00000" value={saNumber} onChange={(e) => setSaNumber(e.target.value)} />
+                        </div>
+                        <div className="field">
+                          <label>Batch <span className="req">*</span></label>
+                          <select required value={batch} onChange={(e) => setBatch(e.target.value)}>
+                            <option value="" disabled>Select your batch</option>
+                            {batches.map((b) => <option key={b.code} value={b.code}>{b.code}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="field">
+                        <label>Center <span className="req">*</span></label>
+                        <select required value={center} onChange={(e) => setCenter(e.target.value)}>
+                          <option value="" disabled>Select your center</option>
+                          {centers.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                        </select>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className="field">
                   <label>What you&apos;re ordering <span className="req">*</span></label>
                   <select value={productSlug} onChange={(e) => setProductSlug(e.target.value)}>

@@ -1,4 +1,4 @@
-import type { Batch, OrderStatus } from '../lib/database.types';
+import type { Batch, Center, OrderStatus } from '../lib/database.types';
 import { EMPTY_FILTERS, type OrderFilters } from '../hooks/useOrders';
 
 const STATUSES: OrderStatus[] = [
@@ -21,15 +21,22 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: 'Cancelled',
 };
 
+export const ATTENDEE_LABEL: Record<'student' | 'graduate' | 'alumni', string> = {
+  student: 'Current student',
+  graduate: 'Fresh graduate',
+  alumni: 'Alumni',
+};
+
 interface Props {
   filters: OrderFilters;
   setFilters: (updater: (f: OrderFilters) => OrderFilters) => void;
   batches: Batch[];
+  centers: Center[];
   productNames: string[];
 }
 
-export default function OrderFilterBar({ filters, setFilters, batches, productNames }: Props) {
-  const active = filters.status || filters.batch || filters.product || filters.from || filters.to || filters.search;
+export default function OrderFilterBar({ filters, setFilters, batches, centers, productNames }: Props) {
+  const active = filters.status || filters.batch || filters.center || filters.product || filters.from || filters.to || filters.search;
 
   return (
     <div className="table-toolbar">
@@ -46,6 +53,10 @@ export default function OrderFilterBar({ filters, setFilters, batches, productNa
       <select value={filters.batch} onChange={(e) => setFilters((f) => ({ ...f, batch: e.target.value }))}>
         <option value="">All batches</option>
         {batches.map((b) => <option key={b.code} value={b.code}>{b.code}</option>)}
+      </select>
+      <select value={filters.center} onChange={(e) => setFilters((f) => ({ ...f, center: e.target.value }))}>
+        <option value="">All centers</option>
+        {centers.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
       </select>
       <select value={filters.product} onChange={(e) => setFilters((f) => ({ ...f, product: e.target.value }))}>
         <option value="">All products</option>

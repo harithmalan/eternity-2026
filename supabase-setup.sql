@@ -7,6 +7,8 @@ create extension if not exists "pgcrypto";
 
 create type user_role as enum ('user','admin','superadmin');
 
+create type attendee_type as enum ('student','graduate','alumni');
+
 create type order_status as enum (
   'awaiting_payment',      -- reserved, no slip yet
   'slip_uploaded',         -- student uploaded, waiting on committee
@@ -25,6 +27,7 @@ create table profiles (
   phone       text,
   sa_number   text,          -- SA / UOB number
   batch       text,
+  center      text,          -- last center picked at order time — prefills the form, no FK (same as batch above)
   avatar_url  text,
   role        user_role not null default 'user',
   created_at  timestamptz not null default now()
@@ -89,7 +92,7 @@ end $$;
 create trigger trg_guard_profile_role before update on profiles
   for each row execute function guard_profile_role();
 
--- ═══ 2. BATCHES (exactly the Google Form list) ═════════════════
+-- ═══ 2. BATCHES & CENTERS ═══════════════════════════════════════
 create table batches (
   code text primary key,
   sort int not null
@@ -101,6 +104,15 @@ insert into batches values
  ('HD IT Y2S1',9),('HD BM Y2S1',10),('HD EE Y2S1',11),
  ('HD IT Y2S2',12),('HD BM Y2S2',13),('HD EE Y2S2',14),
  ('UOB S1',15),('UOB S2',16);
+
+-- Every order carries one, regardless of attendee type — same code-as-label
+-- shape as batches above, no separate display-name column needed.
+create table centers (
+  code text primary key,
+  sort int not null
+);
+insert into centers (code, sort) values
+ ('Colombo',1),('Kandy',2),('Kurunegala',3),('Northern',4);
 
 -- ═══ 3. FEATURE FLAGS ══════════════════════════════════════════
 create table features (
@@ -490,10 +502,18 @@ create table orders (
 
   -- the six Google Form fields, plus size which the form was missing
   full_name text not null,
-  sa_number text not null,
   phone     text not null,
-  batch     text not null references batches(code),
   email     text not null,
+
+  -- current student / fresh graduate give an SA/UOB number + batch;
+  -- alumni have neither and give an NIC instead. Which columns are
+  -- required depends on attendee_type — enforced below, not just in the
+  -- form, so a stale SA number can never ride along on an alumni order.
+  attendee_type attendee_type not null default 'student',
+  sa_number text,
+  batch     text references batches(code),
+  nic       text,
+  center    text not null references centers(code),
 
   subtotal numeric(10,2) not null default 0,
   total    numeric(10,2) not null default 0,
@@ -512,7 +532,23 @@ create table orders (
   -- trg_payment_due (below) overwrites it from settings.payment_window.
   payment_due_at timestamptz not null default (now() + interval '24 hours'),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+
+  -- The actual guarantee behind "the user should never get that far": a
+  -- student/graduate order without an SA number+batch, or an alumni order
+  -- carrying either of those (or missing a NIC), is rejected here — not
+  -- just hidden by the form.
+  constraint orders_attendee_fields_ck check (
+    (attendee_type in ('student','graduate')
+       and sa_number is not null and batch is not null and nic is null)
+    or
+    (attendee_type = 'alumni'
+       and nic is not null and sa_number is null and batch is null)
+  ),
+  -- 9 digits + V/X (old) or 12 digits (new) — uppercase only. The client
+  -- normalizes (strips spaces, uppercases v/x) before sending; this is the
+  -- backstop, not the primary validation surface.
+  constraint orders_nic_format_ck check (nic is null or nic ~ '^([0-9]{9}[VX]|[0-9]{12})$')
 );
 
 create index orders_user_idx   on orders(user_id);
@@ -646,6 +682,112 @@ end $$;
 create trigger trg_guard_order before update on orders
   for each row execute function guard_order_update();
 
+-- ═══ 6b. ENTRY PASSES (alumni only) ═════════════════════════════
+-- Current students/fresh graduates already carry SCU-issued ID; alumni
+-- have nothing to show at the gate, so an approved alumni order gets a QR
+-- pass instead. `id` itself is the QR payload — a scanner just looks up
+-- passes.id, there's no separate code column to keep in sync with it.
+create table passes (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null unique references orders(id) on delete cascade,
+  user_id uuid not null references profiles(id) on delete cascade,
+  checked_in_at timestamptz,
+  checked_in_by uuid references profiles(id),
+  -- Set only by trg_void_pass_on_order_reversal below (or, later, a
+  -- committee tool) — never by the gate scanner itself. Non-null is what
+  -- makes a cached pass read as VOID instead of ADMITTED/ALREADY USED,
+  -- entirely offline, from the manifest each gate device already has.
+  void_reason text,
+  created_at timestamptz not null default now()
+);
+
+-- Fires the instant an order's status transitions INTO 'approved' — not on
+-- every later edit to an already-approved row. `on conflict do nothing`
+-- means a reject → re-upload → approve cycle never issues a second pass
+-- for the same order.
+create or replace function issue_alumni_pass()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'approved' and old.status is distinct from 'approved' and new.attendee_type = 'alumni' then
+    insert into passes (order_id, user_id) values (new.id, new.user_id)
+    on conflict (order_id) do nothing;
+  end if;
+  return new;
+end $$;
+create trigger trg_issue_alumni_pass after update on orders
+  for each row execute function issue_alumni_pass();
+
+-- A pass surviving an approval getting reversed later (fraud caught late,
+-- a duplicate, a genuine mistake) would otherwise still scan clean at the
+-- gate — this is what makes VOID mean something instead of a state nothing
+-- ever reaches. Only touches a pass that isn't already void, so a manual
+-- void reason set some other way is never overwritten.
+create or replace function void_pass_on_order_reversal()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.status in ('rejected','cancelled') and old.status not in ('rejected','cancelled') then
+    update passes set void_reason = 'Order was ' || new.status || ' after approval'
+    where order_id = new.id and void_reason is null;
+  end if;
+  return new;
+end $$;
+create trigger trg_void_pass_on_order_reversal after update on orders
+  for each row execute function void_pass_on_order_reversal();
+
+-- The gate scanner's sync step, once it has a connection again — never the
+-- scan itself, which resolves entirely from the offline-cached manifest.
+-- Idempotent: a pass already checked in (by this device before it last
+-- synced, or by a second device) just returns the existing check-in
+-- untouched rather than erroring, so a retried/duplicate sync can never
+-- overwrite who actually admitted someone with a later device's clock.
+create or replace function check_in_pass(p_pass_id uuid, p_checked_in_at timestamptz default now())
+returns table(out_pass_id uuid, already_checked_in boolean, out_checked_in_at timestamptz, out_checked_in_by uuid)
+language plpgsql security definer set search_path = public as $$
+declare existing passes;
+begin
+  if not is_admin() then raise exception 'Admins only.'; end if;
+
+  select * into existing from passes where id = p_pass_id for update;
+  if not found then raise exception 'Pass not found.'; end if;
+
+  if existing.void_reason is not null then
+    raise exception 'Pass is void: %', existing.void_reason;
+  end if;
+
+  if existing.checked_in_at is not null then
+    return query select existing.id, true, existing.checked_in_at, existing.checked_in_by;
+    return;
+  end if;
+
+  update passes set checked_in_at = p_checked_in_at, checked_in_by = auth.uid()
+  where id = p_pass_id;
+
+  return query select p_pass_id, false, p_checked_in_at, auth.uid();
+end $$;
+revoke all on function check_in_pass(uuid, timestamptz) from public;
+grant execute on function check_in_pass(uuid, timestamptz) to authenticated;
+
+-- What a gate device downloads before doors open — everything a scanner
+-- needs to resolve a scan with zero network calls, including the photo URL
+-- to cache alongside it. `security_invoker = on`: gate volunteers are
+-- committee, so passes/orders/profiles' own admin-branch RLS already
+-- grants exactly the right rows without this view needing to bypass it.
+create or replace view gate_manifest with (security_invoker = on) as
+  select
+    p.id as pass_id,
+    o.code as order_code,
+    o.full_name,
+    o.center,
+    o.phone,
+    pr.avatar_url as photo_url,
+    p.checked_in_at,
+    checker.full_name as checked_in_by_name,
+    p.void_reason
+  from passes p
+  join orders o on o.id = p.order_id
+  join profiles pr on pr.id = p.user_id
+  left join profiles checker on checker.id = p.checked_in_by;
+
 -- ═══ 7. EMAIL OUTBOX (SMTP worker reads this) ══════════════════
 create table email_outbox (
   id bigserial primary key,
@@ -760,6 +902,7 @@ create trigger trg_log_order after update on orders
 -- ═══ 9. ROW LEVEL SECURITY ═════════════════════════════════════
 alter table profiles      enable row level security;
 alter table batches       enable row level security;
+alter table centers       enable row level security;
 alter table features      enable row level security;
 alter table reveals       enable row level security;
 alter table products      enable row level security;
@@ -767,6 +910,7 @@ alter table settings      enable row level security;
 alter table size_chart    enable row level security;
 alter table orders        enable row level security;
 alter table order_items   enable row level security;
+alter table passes        enable row level security;
 alter table email_outbox  enable row level security;
 alter table audit_log     enable row level security;
 
@@ -776,12 +920,14 @@ create policy "update own profile" on profiles for update using (auth.uid() = id
 create policy "admins manage profiles" on profiles for all using (is_admin()) with check (is_admin());
 
 create policy "read batches"    on batches    for select using (true);
+create policy "read centers"    on centers    for select using (true);
 create policy "read features"   on features   for select using (true);
 create policy "read products"   on products   for select using (is_active or is_admin());
 create policy "read size chart" on size_chart for select using (true);
 create policy "read settings"   on settings   for select using (true);
 
 create policy "admins write batches"  on batches    for all using (is_admin()) with check (is_admin());
+create policy "admins write centers"  on centers    for all using (is_admin()) with check (is_admin());
 create policy "admins write features" on features   for all using (is_admin()) with check (is_admin());
 create policy "admins write products" on products   for all using (is_admin()) with check (is_admin());
 create policy "admins write sizes"    on size_chart for all using (is_admin()) with check (is_admin());
@@ -820,6 +966,12 @@ create policy "read own orders"  on orders for select using (auth.uid() = user_i
 create policy "create own order" on orders for insert with check (auth.uid() = user_id);
 create policy "update own order" on orders for update using (auth.uid() = user_id or is_admin());
 create policy "admins delete orders" on orders for delete using (is_admin());
+
+-- Only the trigger (security definer) ever inserts a pass — no client
+-- insert policy at all. "Admins manage" covers the future gate-scanner
+-- tool setting checked_in_at; there's nothing for a regular user to write.
+create policy "read own pass"    on passes for select using (auth.uid() = user_id or is_admin());
+create policy "admins manage passes" on passes for all using (is_admin()) with check (is_admin());
 
 create policy "read own items" on order_items for select
   using (exists (select 1 from orders o where o.id = order_id
@@ -888,7 +1040,8 @@ create or replace view admin_post_view with (security_invoker = on) as
 grant select on admin_post_view to authenticated;
 
 create or replace view admin_order_view with (security_invoker = on) as
-  select o.code, o.status, o.full_name, o.sa_number, o.batch, o.phone, o.email,
+  select o.code, o.status, o.full_name, o.attendee_type, o.sa_number, o.batch,
+         o.nic, o.center, o.phone, o.email,
          o.total, o.payment_ref, o.slip_path, o.created_at, o.reviewed_at,
          o.ready_at, o.collected_at, o.rejection_reason,
          (select string_agg(i.product_name ||
@@ -907,8 +1060,10 @@ create or replace view size_breakdown with (security_invoker = on) as
     and o.status in ('approved','ready_for_collection','collected')
   group by 1 order by (select sort from size_chart s where s.size = i.size);
 
+-- Alumni orders carry no batch — coalesced to a label of their own rather
+-- than surfacing as a bare null row in the dashboard's bar chart.
 create or replace view batch_breakdown with (security_invoker = on) as
-  select o.batch, count(*) as orders, sum(o.total) as value
+  select coalesce(o.batch, 'Alumni') as batch, count(*) as orders, sum(o.total) as value
   from orders o where o.status in ('approved','ready_for_collection','collected')
   group by 1 order by 3 desc;
 
@@ -965,3 +1120,26 @@ select cron.schedule(
 -- the instant they're queued rather than waiting up to 60s for the next
 -- cron tick — but keep the cron job running alongside it as the retry
 -- safety net for anything the webhook's single attempt misses.
+
+-- ═══ 14. NIC RETENTION — DELETE AFTER THE EVENT ════════════════
+-- Alumni orders carry a real NIC, collected only because alumni have no
+-- student ID to issue an entry pass against. The form's own copy promises
+-- it "is deleted after the event" — this is what makes that true, not just
+-- a policy someone has to remember to run by hand.
+create or replace function purge_alumni_nics()
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update orders set nic = null where nic is not null;
+end $$;
+revoke all on function purge_alumni_nics() from public;
+
+-- Fires 03:00 on 21 Sept each year — a few days past the 18th, enough
+-- buffer for on-the-day pass verification. Idempotent (nulling an
+-- already-null column is a no-op), so a repeat run or a future year with
+-- no alumni orders yet is harmless; nothing needs to unschedule this after
+-- the event.
+select cron.schedule(
+  'purge-alumni-nics-post-event',
+  '0 3 21 9 *',
+  $$ select purge_alumni_nics(); $$
+);

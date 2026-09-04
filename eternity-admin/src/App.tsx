@@ -16,6 +16,9 @@ import Stock from './pages/Stock';
 import Emails from './pages/Emails';
 import Members from './pages/Members';
 import Launch from './pages/Launch';
+// Renamed on import — this app's own auth-gate component below is also
+// named `Gate`, and that one wins the bare name since it's declared here.
+import EntryGate from './pages/Gate';
 
 export default function App() {
   // Defensive cleanup: a stale bookmarked/cached implicit-flow link (or one
@@ -65,6 +68,13 @@ function Gate() {
   // on stage. Checked here, before Shell, rather than as a route inside it.
   if (location.pathname === '/launch') {
     return isSuperadmin ? <Launch /> : <Navigate to="/" replace />;
+  }
+
+  // /gate is the same story — full-bleed camera view on a volunteer's
+  // phone at the door, not a sidebar-and-content layout. Any committee
+  // member can run it, not just a superadmin.
+  if (location.pathname === '/gate') {
+    return <EntryGate />;
   }
 
   return (

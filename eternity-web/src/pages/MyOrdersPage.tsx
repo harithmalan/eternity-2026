@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useMyOrders, type OrderWithItems } from '../hooks/useMyOrders';
 import PaymentCountdown from '../components/PaymentCountdown';
+import PassCard from '../components/PassCard';
 import { useToast } from '../components/Toast';
 import Skeleton from '../components/Skeleton';
 import type { OrderStatus } from '../lib/database.types';
@@ -144,53 +145,56 @@ function OrderCard({
   };
 
   return (
-    <div className="order-card">
-      <div className="order-head">
-        <h3 className="order-code">{order.code}</h3>
-        <span className="order-total">Rs {order.total.toLocaleString('en-LK')}</span>
-      </div>
-      <p className="order-items">
-        {order.items.map((i) => `${i.product_name}${i.size ? ` (${i.size})` : ''} ×${i.qty}`).join(', ')}
-      </p>
+    <>
+      {order.pass && <PassCard pass={order.pass} holderName={order.full_name} orderCode={order.code} />}
+      <div className="order-card">
+        <div className="order-head">
+          <h3 className="order-code">{order.code}</h3>
+          <span className="order-total">Rs {order.total.toLocaleString('en-LK')}</span>
+        </div>
+        <p className="order-items">
+          {order.items.map((i) => `${i.product_name}${i.size ? ` (${i.size})` : ''} ×${i.qty}`).join(', ')}
+        </p>
 
-      <div className="timeline">
-        {STEPS.map((s, i) => (
-          <div key={s.status} className={`timeline-step${i < current ? ' done' : ''}${i === current ? ' current' : ''}`}>
-            <div className="dot" />
-            <div className="label">{s.label}</div>
+        <div className="timeline">
+          {STEPS.map((s, i) => (
+            <div key={s.status} className={`timeline-step${i < current ? ' done' : ''}${i === current ? ' current' : ''}`}>
+              <div className="dot" />
+              <div className="label">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {order.status === 'rejected' && (
+          <div className="order-rejected">
+            <b>Rejected.</b> {order.rejection_reason || 'The committee could not verify your slip.'} Upload a new one below.
           </div>
-        ))}
+        )}
+
+        {(order.status === 'awaiting_payment' || order.status === 'rejected') && (
+          <PaymentCountdown dueAt={order.payment_due_at} />
+        )}
+
+        {canUpload && (
+          <div className="slip-upload">
+            <input
+              ref={fileRef}
+              id={`slip-${order.id}`}
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onFile(file);
+                e.target.value = '';
+              }}
+            />
+            <label className="btn btn-ghost" htmlFor={`slip-${order.id}`} style={{ cursor: uploading ? 'wait' : 'pointer' }}>
+              {uploading ? 'Uploading…' : order.status === 'rejected' ? 'Re-upload slip' : 'Upload slip'}
+            </label>
+            <span className="slip-status">JPG, PNG or PDF · max 5MB</span>
+          </div>
+        )}
       </div>
-
-      {order.status === 'rejected' && (
-        <div className="order-rejected">
-          <b>Rejected.</b> {order.rejection_reason || 'The committee could not verify your slip.'} Upload a new one below.
-        </div>
-      )}
-
-      {(order.status === 'awaiting_payment' || order.status === 'rejected') && (
-        <PaymentCountdown dueAt={order.payment_due_at} />
-      )}
-
-      {canUpload && (
-        <div className="slip-upload">
-          <input
-            ref={fileRef}
-            id={`slip-${order.id}`}
-            type="file"
-            accept="image/jpeg,image/png,application/pdf"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onFile(file);
-              e.target.value = '';
-            }}
-          />
-          <label className="btn btn-ghost" htmlFor={`slip-${order.id}`} style={{ cursor: uploading ? 'wait' : 'pointer' }}>
-            {uploading ? 'Uploading…' : order.status === 'rejected' ? 'Re-upload slip' : 'Upload slip'}
-          </label>
-          <span className="slip-status">JPG, PNG or PDF · max 5MB</span>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

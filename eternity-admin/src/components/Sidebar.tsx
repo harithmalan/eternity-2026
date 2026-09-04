@@ -40,6 +40,9 @@ export default function Sidebar() {
             Members
           </NavLink>
         )}
+        <NavLink to="/gate" className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+          Entry gate
+        </NavLink>
       </nav>
       {isSuperadmin && (
         <div className="sidebar-launch">

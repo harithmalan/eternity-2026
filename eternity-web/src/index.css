@@ -432,6 +432,15 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
   background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
 }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.attendee-toggle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.attendee-toggle button {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+  border: 1px solid var(--line); padding: 11px 6px; color: var(--dust); transition: .2s;
+  text-align: center; line-height: 1.35;
+}
+.attendee-toggle button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(242, 176, 30, .09); }
+.field-helper { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .02em; color: var(--dust-dim); margin: 8px 0 0; }
+.field-privacy-note { font-size: 11.5px; font-weight: 200; color: var(--dust); line-height: 1.55; margin: 8px 0 0; }
 .sizes { display: flex; gap: 7px; flex-wrap: wrap; }
 .sizes button {
   font-family: var(--f-mono); font-size: 11px; border: 1px solid var(--line); padding: 8px 0; width: 52px;
@@ -443,6 +452,33 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
 .avail-warn { color: var(--gold); font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; margin-top: 10px; }
 .draft-note { color: var(--dust-dim); font-family: var(--f-mono); font-size: 10px; letter-spacing: .04em; text-align: center; margin: 10px 0 0; }
 .due-countdown { color: var(--gold); font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+.pass-card {
+  position: relative; text-align: center; padding: 40px clamp(20px, 5vw, 60px); margin-bottom: 16px;
+  border: 1px solid var(--gold-dim);
+  background: radial-gradient(ellipse at 50% 0%, rgba(242, 176, 30, .12), transparent 62%), var(--ink-2);
+  transition: opacity .5s;
+}
+.pass-card.admitted { opacity: .4; }
+.pass-card:fullscreen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100vw; height: 100vh; background: var(--void); margin: 0; border: none;
+}
+.pass-eyebrow { font-family: var(--f-mono); font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--gold); margin: 0 0 24px; }
+.pass-qr-wrap { display: inline-block; background: #fff; padding: 16px; border-radius: 14px; line-height: 0; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
+.pass-card.admitted .pass-qr-wrap { filter: grayscale(1); }
+.pass-qr-wrap canvas { display: block; width: 240px; height: 240px; }
+.pass-code { font-family: var(--f-mono); font-size: 18px; letter-spacing: .2em; color: var(--chrome); margin: 22px 0 4px; }
+.pass-code-hint { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dust-dim); margin: 0 0 22px; }
+.pass-holder { font-family: var(--f-display); font-size: 20px; font-weight: 400; margin: 0 0 6px; }
+.pass-meta { font-family: var(--f-mono); font-size: 11px; letter-spacing: .04em; color: var(--dust); margin: 0; }
+.pass-admitted-pill {
+  display: inline-block; margin-top: 22px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--chrome); border: 1px solid var(--line-strong); background: rgba(232, 234, 240, .06); padding: 9px 20px; border-radius: 999px;
+}
+.pass-download { margin-top: 24px; }
+.pass-home-hint { display: none; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .04em; color: var(--dust-dim); margin: 14px 0 0; }
+@media (max-width: 640px) { .pass-home-hint { display: block; } }
 
 .order-card { border: 1px solid var(--line); background: rgba(11, 11, 16, .82); padding: 26px; }
 .order-card + .order-card { margin-top: 16px; }

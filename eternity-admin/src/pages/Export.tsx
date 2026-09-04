@@ -1,7 +1,7 @@
 import { createElement, useMemo, useState } from 'react';
 import { EMPTY_FILTERS, useOrders, type OrderFilters } from '../hooks/useOrders';
-import { useBatches, useProducts } from '../hooks/useAdminData';
-import OrderFilterBar, { STATUS_LABEL } from '../components/OrderFilterBar';
+import { useBatches, useCenters, useProducts } from '../hooks/useAdminData';
+import OrderFilterBar, { ATTENDEE_LABEL, STATUS_LABEL } from '../components/OrderFilterBar';
 import { downloadBlob, ordersToCsv } from '../lib/csv';
 import type { BatchBreakdownEntry, SizeBreakdownEntry } from '../pdf/OrdersReport';
 
@@ -15,6 +15,7 @@ export default function Export() {
   const [filters, setFilters] = useState<OrderFilters>(EMPTY_FILTERS);
   const { orders, loading } = useOrders(filters);
   const { data: batches } = useBatches();
+  const { data: centers } = useCenters();
   const { data: products } = useProducts();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
 
@@ -33,10 +34,13 @@ export default function Export() {
   const batchBreakdown = useMemo<BatchBreakdownEntry[]>(() => {
     const map = new Map<string, { orders: number; value: number }>();
     orders.forEach((o) => {
-      const entry = map.get(o.batch) ?? { orders: 0, value: 0 };
+      // Alumni orders carry no batch — grouped under a label of their own
+      // rather than dropped or merged into a real batch's numbers.
+      const key = o.batch ?? 'Alumni';
+      const entry = map.get(key) ?? { orders: 0, value: 0 };
       entry.orders += 1;
       entry.value += Number(o.total);
-      map.set(o.batch, entry);
+      map.set(key, entry);
     });
     return Array.from(map.entries())
       .map(([batch, v]) => ({ batch, ...v }))
@@ -110,7 +114,7 @@ export default function Export() {
         PDF is the designed report for committee meetings.
       </p>
 
-      <OrderFilterBar filters={filters} setFilters={setFilters} batches={batches} productNames={productNames} />
+      <OrderFilterBar filters={filters} setFilters={setFilters} batches={batches} centers={centers} productNames={productNames} />
 
       <div className="panel" style={{ marginTop: 20 }}>
         <h3>Preview</h3>
@@ -121,14 +125,15 @@ export default function Export() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Code</th><th>Name</th><th>Batch</th><th>Total</th><th>Status</th></tr>
+                <tr><th>Code</th><th>Name</th><th>Type</th><th>Batch / Center</th><th>Total</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {orders.slice(0, 8).map((o) => (
                   <tr key={o.code} style={{ cursor: 'default' }}>
                     <td className="emphasis">{o.code}</td>
                     <td style={{ color: 'var(--chrome)' }}>{o.full_name}</td>
-                    <td>{o.batch}</td>
+                    <td>{ATTENDEE_LABEL[o.attendee_type]}</td>
+                    <td>{o.attendee_type === 'alumni' ? o.center : `${o.batch} · ${o.center}`}</td>
                     <td>Rs {Number(o.total).toLocaleString('en-LK')}</td>
                     <td>{STATUS_LABEL[o.status]}</td>
                   </tr>

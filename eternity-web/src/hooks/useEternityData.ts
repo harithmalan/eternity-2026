@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Batch, Product, Settings, SizeChartRow } from '../lib/database.types';
+import type { Batch, Center, Product, Settings, SizeChartRow } from '../lib/database.types';
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -82,6 +82,33 @@ export function useBatches() {
   }, []);
 
   return { batches, loading };
+}
+
+export function useCenters() {
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from('centers')
+      .select('*')
+      .order('sort')
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (!error && data) setCenters(data);
+        setLoading(false);
+      },
+      () => {
+        if (alive) setLoading(false);
+      }
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return { centers, loading };
 }
 
 export function useSettings() {
