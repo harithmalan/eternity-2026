@@ -413,6 +413,8 @@ tbody td.emphasis { color: var(--chrome); }
 .gate-download-bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
 .gate-download-bar-fill { height: 100%; background: var(--gold); transition: width .2s; }
 .gate-download-progress-label { font-family: var(--f-mono); font-size: 10.5px; color: var(--dust-dim); margin: 8px 0 0; }
+.gate-download-error { color: #f2a0a0; font-family: var(--f-mono); font-size: 12px; max-width: 420px; margin: 0; }
+.gate-download-warn { color: var(--gold); font-family: var(--f-mono); font-size: 12px; max-width: 420px; margin: 0; }
 
 .gate-status-bar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 8px;

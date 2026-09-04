@@ -13,22 +13,43 @@ export interface DownloadProgress {
  * request per person at exactly the moment there's no network. Run this
  * once, before doors open, while there's still a good connection.
  */
-export async function downloadManifest(onProgress?: (p: DownloadProgress) => void): Promise<{ count: number; photoFailures: number }> {
+export async function downloadManifest(onProgress?: (p: DownloadProgress) => void): Promise<{ count: number; rowFailures: number; photoFailures: number }> {
   const { data, error } = await supabase.from('gate_manifest').select('*');
   if (error) throw error;
   const rows = data ?? [];
 
+  // The exact shape of what the server actually sent — logged before any
+  // of it is touched, so a field that's missing or named differently than
+  // this code expects is visible in devtools rather than only inferrable
+  // from a stack trace.
+  console.log('[gate] gate_manifest response:', rows);
+
   await clearManifest();
 
+  // One malformed row (a manifest column renamed live but not here — this
+  // has happened before on this project) must never take the other few
+  // hundred good rows down with it. Each row is cached independently; a
+  // failure is logged with the row that caused it and the download keeps
+  // going.
+  let rowFailures = 0;
+  const validPassIds = new Set<string>();
   for (let i = 0; i < rows.length; i++) {
-    await saveManifestRow(rows[i]);
+    const row = rows[i];
+    try {
+      await saveManifestRow(row);
+      if (row.pass_id) validPassIds.add(row.pass_id);
+    } catch (err) {
+      rowFailures++;
+      console.error('[gate] failed to cache manifest row:', row, err);
+    }
     onProgress?.({ done: i + 1, total: rows.length, stage: 'passes' });
   }
 
   // Photos come from an external host (Google/Facebook's OAuth avatar CDN,
   // not our own storage) — fetched with modest concurrency so a few hundred
-  // of them don't open a few hundred sockets at once.
-  const withPhotos = rows.filter((r) => r.photo_url);
+  // of them don't open a few hundred sockets at once. Only for rows that
+  // actually made it into the cache above.
+  const withPhotos = rows.filter((r) => r.photo_url && validPassIds.has(r.pass_id));
   let done = 0;
   let photoFailures = 0;
   const CONCURRENCY = 6;
@@ -45,10 +66,11 @@ export async function downloadManifest(onProgress?: (p: DownloadProgress) => voi
         } else {
           photoFailures++;
         }
-      } catch {
+      } catch (err) {
         // No photo cached for this person — the gate UI falls back to
         // initials. Not fatal, doesn't stop the rest of the download.
         photoFailures++;
+        console.error('[gate] failed to fetch/cache photo for row:', row, err);
       }
       done++;
       onProgress?.({ done, total: withPhotos.length, stage: 'photos' });
@@ -57,7 +79,7 @@ export async function downloadManifest(onProgress?: (p: DownloadProgress) => voi
 
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, withPhotos.length) }, worker));
 
-  return { count: rows.length, photoFailures };
+  return { count: validPassIds.size, rowFailures, photoFailures };
 }
 
 /**

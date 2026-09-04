@@ -4,11 +4,12 @@ import type { Database } from './database.types';
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY — Supabase calls will fail until these are set in .env.local'
-  );
-}
+// Fail fast, with a name that says exactly what's missing, at the one
+// place that actually knows — not later, as some unrelated call deep in a
+// feature silently receiving `undefined` and throwing a generic TypeError
+// that gives no hint the real problem is a missing .env value.
+if (!supabaseUrl) throw new Error('Missing VITE_SUPABASE_URL');
+if (!supabaseAnonKey) throw new Error('Missing VITE_SUPABASE_ANON_KEY');
 
 // Anon key only — always. Every mutation in this app goes through RLS as
 // the signed-in admin's own user. There is no service_role key anywhere in
@@ -20,8 +21,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // short-lived single-use `?code=` instead, which is also what stops that
 // code from ever accumulating in a `redirectTo` built from the current URL.
 export const supabase = createClient<Database>(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-anon-key',
+  supabaseUrl,
+  supabaseAnonKey,
   {
     auth: {
       flowType: 'pkce',

@@ -37,6 +37,8 @@ export default function Gate() {
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloadNote, setDownloadNote] = useState<string | null>(null);
+  const [everDownloaded, setEverDownloaded] = useState(false);
 
   const [result, setResult] = useState<GateResult | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
@@ -57,10 +59,20 @@ export default function Gate() {
   const runDownload = async () => {
     setDownloading(true);
     setDownloadError(null);
+    setDownloadNote(null);
     try {
-      await downloadManifest(setDownloadProgress);
+      const { count, rowFailures, photoFailures } = await downloadManifest(setDownloadProgress);
+      setEverDownloaded(true);
+      if (count === 0) {
+        setDownloadNote('The manifest came back empty — no approved alumni orders yet. Try again closer to the event.');
+      } else if (rowFailures > 0) {
+        setDownloadNote(`Cached ${count} pass${count === 1 ? '' : 'es'}, but ${rowFailures} row${rowFailures === 1 ? '' : 's'} couldn't be read — see the console for which ones. ${photoFailures > 0 ? `${photoFailures} photo${photoFailures === 1 ? '' : 's'} also failed to cache.` : ''}`);
+      } else if (photoFailures > 0) {
+        setDownloadNote(`Cached ${count} passes — ${photoFailures} photo${photoFailures === 1 ? '' : 's'} couldn't be fetched, those will show initials instead.`);
+      }
       await refreshCounts();
     } catch (err) {
+      console.error('[gate] manifest download failed:', err);
       setDownloadError(err instanceof Error ? err.message : 'Download failed.');
     }
     setDownloading(false);
@@ -135,9 +147,10 @@ export default function Gate() {
             </p>
           </div>
         )}
-        {downloadError && <p className="auth-error">{downloadError}</p>}
+        {downloadError && <p className="gate-download-error">{downloadError}</p>}
+        {downloadNote && !downloadError && <p className="gate-download-warn">{downloadNote}</p>}
         <button type="button" className="btn btn-gold" disabled={downloading} onClick={runDownload}>
-          {downloading ? 'Downloading…' : 'Download manifest'}
+          {downloading ? 'Downloading…' : downloadError ? 'Retry' : everDownloaded ? 'Download again' : 'Download manifest'}
         </button>
       </div>
     );
