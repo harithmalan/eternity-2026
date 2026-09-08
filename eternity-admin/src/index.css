@@ -88,6 +88,32 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .stat-card .v { font-family: var(--f-mono); font-size: 26px; color: var(--chrome); margin-top: 8px; font-variant-numeric: tabular-nums; }
 .stat-card .v.gold { color: var(--gold); }
 
+/* The committee's daily print-run check is deliberately larger than all other stats. */
+.merch-sold { border: 1px solid var(--line); background: var(--ink); margin-bottom: 32px; }
+.merch-sold-head { padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.merch-sold-head h2 { font-family: var(--f-display); font-size: 24px; font-weight: 400; margin: 5px 0 0; }
+.merch-sold-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.merch-sold-stat { min-width: 0; background: var(--ink); padding: 26px 28px 24px; }
+.merch-sold-label, .merch-sold-note, .merch-sold-limit-label, .merch-sold-warning { font-family: var(--f-mono); text-transform: uppercase; }
+.merch-sold-label { color: var(--dust-dim); font-size: 10px; letter-spacing: .2em; margin: 0; }
+.merch-sold-stat strong { display: block; color: var(--chrome); font-family: var(--f-mono); font-size: clamp(48px, 7vw, 84px); font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: 0; line-height: 1; margin: 24px 0; }
+.merch-sold-note { color: var(--dust-dim); font-size: 9.5px; letter-spacing: .08em; margin: 0; }
+.merch-sold-limit { margin-top: 22px; }
+.merch-sold-limit-label { color: var(--dust); font-size: 10px; letter-spacing: .1em; margin-bottom: 8px; }
+.merch-sold-progress { height: 2px; background: var(--line); overflow: hidden; }
+.merch-sold-progress span { display: block; height: 100%; background: var(--line-strong); }
+.merch-sold-progress span.gold { background: var(--gold); }
+.merch-sold-warning { color: var(--gold); font-size: 9.5px; letter-spacing: .08em; margin: 9px 0 0; }
+.merch-sold-breakdown { border: 0; border-top: 1px solid var(--line); }
+.merch-sold-breakdown tbody tr { cursor: default; }
+.merch-sold-total td { border-top: 1px solid var(--line); color: var(--chrome); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.merch-sold-total + .merch-sold-total td { border-top: 0; }
+@media (max-width: 560px) {
+  .merch-sold-stats { grid-template-columns: 1fr; }
+  .merch-sold-stat { padding: 24px 20px; }
+  .merch-sold-head { padding: 18px 20px; }
+}
+
 .panel { border: 1px solid var(--line); background: var(--ink); padding: 24px; }
 .panel + .panel { margin-top: 20px; }
 .panel h3 { font-family: var(--f-display); font-size: 19px; font-weight: 400; margin: 0 0 4px; }

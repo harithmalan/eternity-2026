@@ -1,6 +1,7 @@
 import { useDashboard } from '../hooks/useDashboard';
+import { useMerchSold } from '../hooks/useMerchSold';
 import BarChart from '../components/BarChart';
-import type { OrderStatus } from '../lib/database.types';
+import type { OrderStatus, ProductTotalsRow } from '../lib/database.types';
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   awaiting_payment: 'Awaiting payment',
@@ -14,6 +15,9 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 
 export default function Dashboard() {
   const { data, loading } = useDashboard();
+  const { data: merch, loading: merchLoading } = useMerchSold();
+
+  if (merchLoading || !merch) return <p className="page-note">Loading...</p>;
 
   if (loading || !data) return <p className="page-note">Loading…</p>;
 
@@ -28,6 +32,14 @@ export default function Dashboard() {
           <h1 className="page-title">Dashboard</h1>
         </div>
       </div>
+
+      <MerchSoldPanel
+        totalTees={merch.totals.total_tees}
+        totalBands={merch.totals.total_bands}
+        teeLimit={merch.settings.tee_print_limit}
+        bandLimit={merch.settings.band_print_limit}
+        products={merch.products}
+      />
 
       <div className="stat-grid">
         <div className="stat-card">
@@ -94,5 +106,71 @@ export default function Dashboard() {
         </div>
       </div>
     </>
+  );
+}
+
+function MerchSoldPanel({
+  totalTees,
+  totalBands,
+  teeLimit,
+  bandLimit,
+  products,
+}: {
+  totalTees: number;
+  totalBands: number;
+  teeLimit: number | null;
+  bandLimit: number | null;
+  products: ProductTotalsRow[];
+}) {
+  return (
+    <section className="merch-sold" aria-labelledby="merch-sold-title">
+      <div className="merch-sold-head">
+        <p className="eyebrow">Live print report</p>
+        <h2 id="merch-sold-title">Merch sold</h2>
+      </div>
+      <div className="merch-sold-stats">
+        <MerchStat label="Tees sold" total={totalTees} limit={teeLimit} />
+        <MerchStat label="Wristbands sold" total={totalBands} limit={bandLimit} />
+      </div>
+      <div className="merch-sold-breakdown table-wrap">
+        <table>
+          <thead><tr><th>Product</th><th>Units</th><th>Revenue</th></tr></thead>
+          <tbody>
+            {products.map((product) => (
+              <tr key={product.slug}>
+                <td className="emphasis">{product.name}</td>
+                <td>{Number(product.units_sold).toLocaleString('en-LK')}</td>
+                <td>Rs {Number(product.revenue).toLocaleString('en-LK')}</td>
+              </tr>
+            ))}
+            <tr className="merch-sold-total"><td>Total tees (all sources)</td><td colSpan={2}>{Number(totalTees).toLocaleString('en-LK')}</td></tr>
+            <tr className="merch-sold-total"><td>Total bands (all sources)</td><td colSpan={2}>{Number(totalBands).toLocaleString('en-LK')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function MerchStat({ label, total, limit }: { label: string; total: number; limit: number | null }) {
+  const hasLimit = limit !== null;
+  const ratio = hasLimit && limit > 0 ? total / limit : 1;
+  const closeToLimit = hasLimit && ratio > 0.95;
+
+  return (
+    <article className="merch-sold-stat">
+      <p className="merch-sold-label">{label}</p>
+      <strong>{Number(total).toLocaleString('en-LK')}</strong>
+      <p className="merch-sold-note">incl. bundles</p>
+      {hasLimit && (
+        <div className="merch-sold-limit">
+          <div className="merch-sold-limit-label">{Number(total).toLocaleString('en-LK')} / {Number(limit).toLocaleString('en-LK')}</div>
+          <div className="merch-sold-progress" aria-label={`${label}: ${total} of ${limit}`}>
+            <span className={ratio >= 0.8 ? 'gold' : ''} style={{ width: `${Math.min(ratio * 100, 100)}%` }} />
+          </div>
+          {closeToLimit && <p className="merch-sold-warning">Close to your print limit.</p>}
+        </div>
+      )}
+    </article>
   );
 }

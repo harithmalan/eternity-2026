@@ -391,6 +391,9 @@ create table settings (
   bank_branch        text not null default 'Bank of Ceylon — Kollupitiya Branch',
   collection_point   text not null default '12th Floor Common Room',
   band_capacity      int  not null default 300 check (band_capacity >= 0),
+  -- Null means the committee has not set a print ceiling yet.
+  tee_print_limit    int,
+  band_print_limit   int,
   -- Artists card display-only knobs — NOT derived from how many artist rows
   -- exist or are revealed. `artist_placeholders` is a committee-set guess
   -- at remaining silhouette count, not the true remaining number.

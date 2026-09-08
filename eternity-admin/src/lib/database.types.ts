@@ -85,6 +85,8 @@ export type Settings = {
   bank_branch: string;
   collection_point: string;
   band_capacity: number;
+  tee_print_limit: number | null;
+  band_print_limit: number | null;
   artist_placeholders: number;
   more_artists_coming: boolean;
   feed_max_video_secs: number;
@@ -268,6 +270,10 @@ export type AdminOrderRow = {
 export type SizeBreakdownRow = { size: string; units: number };
 export type BatchBreakdownRow = { batch: string; orders: number; value: number };
 export type RevenueSummaryRow = { status: OrderStatus; orders: number; value: number };
+/** `tees_and_bands_sold` VIEW — confirmed merchandise, with bundles exploded. */
+export type TeesAndBandsSoldRow = { total_tees: number; total_bands: number };
+/** `product_totals` VIEW — confirmed units and revenue by sellable product. */
+export type ProductTotalsRow = { slug: string; name: string; units_sold: number; revenue: number };
 
 type Table<Row> = { Row: Row; Insert: Partial<Row>; Update: Partial<Row>; Relationships: [] };
 type View<Row> = { Row: Row; Relationships: [] };
@@ -302,6 +308,8 @@ export type Database = {
       size_breakdown: View<SizeBreakdownRow>;
       batch_breakdown: View<BatchBreakdownRow>;
       revenue_summary: View<RevenueSummaryRow>;
+      tees_and_bands_sold: View<TeesAndBandsSoldRow>;
+      product_totals: View<ProductTotalsRow>;
     };
     Functions: {
       set_launch_state: {

@@ -42,6 +42,15 @@ export default function Stock() {
       </div>
 
       <div className="panel">
+        <h3>Print ceilings</h3>
+        <p className="hint">Dashboard progress is measured against these confirmed-sales limits.</p>
+        <div className="field-row">
+          <PrintLimitRow label="Tee print limit" column="tee_print_limit" value={settings.tee_print_limit} onSaved={refetchSettings} />
+          <PrintLimitRow label="Wristband print limit" column="band_print_limit" value={settings.band_print_limit} onSaved={refetchSettings} />
+        </div>
+      </div>
+
+      <div className="panel">
         <h3>Tee sizes</h3>
         <p className="hint">Capacity counts every non-rejected, non-cancelled order — including ones still awaiting payment.</p>
         <BarChart rows={sizes.map((s) => ({ label: s.size, value: s.taken, max: Math.max(s.cap, s.taken, 1), soldOut: s.sold_out }))} />
@@ -60,6 +69,45 @@ export default function Stock() {
 
       <OverdueOrders />
     </>
+  );
+}
+
+function PrintLimitRow({
+  label,
+  column,
+  value,
+  onSaved,
+}: {
+  label: string;
+  column: 'tee_print_limit' | 'band_print_limit';
+  value: number | null;
+  onSaved: () => void;
+}) {
+  const [input, setInput] = useState(value === null ? '' : String(value));
+  const [saving, setSaving] = useState(false);
+  const parsed = input === '' ? null : Number(input);
+  const valid = parsed === null || (Number.isInteger(parsed) && parsed >= 0);
+  const dirty = input !== (value === null ? '' : String(value));
+
+  const save = async () => {
+    if (!valid) return;
+    setSaving(true);
+    const update = column === 'tee_print_limit'
+      ? { tee_print_limit: parsed }
+      : { band_print_limit: parsed };
+    await supabase.from('settings').update(update).eq('id', 1);
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <input type="number" min={0} step={1} placeholder="Not set" value={input} onChange={(event) => setInput(event.target.value)} />
+        <button className="btn btn-ghost btn-sm" disabled={!dirty || !valid || saving} onClick={save}>{saving ? 'Saving...' : 'Save'}</button>
+      </div>
+    </div>
   );
 }
 
