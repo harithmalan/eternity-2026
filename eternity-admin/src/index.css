@@ -114,6 +114,39 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .merch-sold-head { padding: 18px 20px; }
 }
 
+/* Event-day handover: ample targets, a quiet queue, and one operational count. */
+.distribution-page { max-width: 820px; }
+.distribution-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.distribution-counter { min-width: min(100%, 270px); font-family: var(--f-mono); text-align: right; }
+.distribution-counter strong { display: block; color: var(--chrome); font-size: clamp(28px, 4.5vw, 46px); font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
+.distribution-counter > span { display: block; color: var(--dust-dim); font-size: 10px; letter-spacing: .18em; margin-top: 8px; text-transform: uppercase; }
+.distribution-progress { height: 2px; background: var(--line); margin-top: 10px; overflow: hidden; }
+.distribution-progress span { display: block; height: 100%; background: var(--chrome); transition: width .25s ease; }
+.distribution-search { display: block; margin-bottom: 18px; }
+.distribution-search span { display: block; color: var(--dust-dim); font-family: var(--f-mono); font-size: 10px; letter-spacing: .18em; margin-bottom: 8px; text-transform: uppercase; }
+.distribution-search input { width: 100%; border: 1px solid var(--line-strong); border-radius: 0; background: var(--ink); color: var(--chrome); font-family: var(--f-body); font-size: 16px; font-weight: 300; padding: 17px 18px; }
+.distribution-search input:focus { border-color: var(--gold); outline: none; }
+.distribution-error { border: 1px solid var(--gold-dim); color: var(--gold); font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; margin: 0 0 18px; padding: 12px 14px; }
+.distribution-groups { display: flex; flex-direction: column; gap: 14px; }
+.distribution-group { border: 1px solid var(--line); background: var(--ink); }
+.distribution-group > header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); color: var(--dust); font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; padding: 11px 14px; text-transform: uppercase; }
+.distribution-group > header span:last-child { color: var(--dust-dim); overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.distribution-item { align-items: center; cursor: pointer; display: grid; gap: 15px; grid-template-columns: 28px minmax(0, 1fr); min-height: 76px; padding: 15px 16px; }
+.distribution-item + .distribution-item { border-top: 1px solid var(--line); }
+.distribution-item input { accent-color: var(--gold); cursor: pointer; height: 26px; margin: 0; width: 26px; }
+.distribution-item input:disabled { cursor: wait; }
+.distribution-item-copy { min-width: 0; }
+.distribution-item-copy strong { color: var(--chrome); display: block; font-family: var(--f-body); font-size: 15px; font-weight: 400; }
+.distribution-item-copy small { color: var(--dust); display: block; font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; margin-top: 5px; }
+.distribution-item.is-given { opacity: .48; }
+.distribution-item.is-given .distribution-item-copy small { color: var(--dust-dim); }
+@media (max-width: 560px) {
+  .distribution-head { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .distribution-counter { text-align: left; width: 100%; }
+  .distribution-group > header { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .distribution-group > header span:last-child { text-align: left; }
+}
+
 .panel { border: 1px solid var(--line); background: var(--ink); padding: 24px; }
 .panel + .panel { margin-top: 20px; }
 .panel h3 { font-family: var(--f-display); font-size: 19px; font-weight: 400; margin: 0 0 4px; }

@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 import type { AdminOrderRow } from '../lib/database.types';
 import { STATUS_LABEL } from '../components/OrderFilterBar';
+import type { ExportMerchSummary } from '../hooks/useExportMerchSummary';
 
 // The site's wordmark PNG is chrome-on-transparent, built for the void
 // background — on white paper it's nearly invisible. The report is
@@ -17,9 +18,16 @@ const styles = StyleSheet.create({
   reportTitle: { fontFamily: 'Bodoni Moda', fontSize: 16, marginBottom: 2 },
   reportSubtitle: { fontFamily: 'Chivo Mono', fontSize: 8, color: '#666666', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   sectionTitle: { fontFamily: 'Bodoni Moda', fontSize: 13, marginTop: 22, marginBottom: 8 },
-  statRow: { flexDirection: 'row', gap: 28, marginTop: 6 },
-  statLabel: { fontFamily: 'Chivo Mono', fontSize: 7, letterSpacing: 1, textTransform: 'uppercase', color: '#888888' },
-  statValue: { fontFamily: 'Chivo Mono', fontSize: 15, marginTop: 3, color: '#0a0a0a' },
+  merchSummary: { marginTop: 6, borderWidth: 0.5, borderColor: '#d6d6d6', padding: 12 },
+  merchTitle: { fontFamily: 'Chivo Mono', fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', color: '#111111', marginBottom: 8 },
+  merchRow: { flexDirection: 'row', paddingVertical: 3 },
+  merchProduct: { width: '56%', fontSize: 8.5, color: '#222222' },
+  merchUnits: { width: '18%', fontFamily: 'Chivo Mono', fontSize: 8, color: '#222222', textAlign: 'right' },
+  merchRevenue: { width: '26%', fontFamily: 'Chivo Mono', fontSize: 8, color: '#222222', textAlign: 'right' },
+  merchRule: { height: 0.5, backgroundColor: '#bbbbbb', marginVertical: 7 },
+  merchTotalLabel: { width: '74%', fontFamily: 'Chivo Mono', fontSize: 7.5, letterSpacing: 0.4, color: '#111111' },
+  merchTotalValue: { width: '26%', fontFamily: 'Chivo Mono', fontSize: 8.5, color: '#111111', textAlign: 'right' },
+  clarifier: { fontSize: 7.5, color: '#777777', lineHeight: 1.45, marginTop: 9 },
   thRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#111111', paddingBottom: 5, marginBottom: 2 },
   th: { fontFamily: 'Chivo Mono', fontSize: 7, letterSpacing: 0.6, textTransform: 'uppercase', color: '#888888' },
   tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: '#dddddd', paddingVertical: 5 },
@@ -40,6 +48,7 @@ interface Props {
   batchBreakdown: BatchBreakdownEntry[];
   filterSummary: string;
   generatedAt: Date;
+  merchSummary: ExportMerchSummary;
 }
 
 function money(n: number): string {
@@ -65,29 +74,29 @@ function Header({ generatedAt, filterSummary }: { generatedAt: Date; filterSumma
   );
 }
 
-export default function OrdersReport({ orders, sizeBreakdown, batchBreakdown, filterSummary, generatedAt }: Props) {
-  const totalOrders = orders.length;
-  const totalValue = orders.reduce((sum, o) => sum + Number(o.total), 0);
-  const totalUnits = orders.reduce((sum, o) => sum + (o.items_json?.reduce((s, i) => s + i.qty, 0) ?? 0), 0);
+export default function OrdersReport({ orders, sizeBreakdown, batchBreakdown, filterSummary, generatedAt, merchSummary }: Props) {
 
   return (
     <Document title={`Eternity orders — ${generatedAt.toISOString().slice(0, 10)}`}>
       <Page size="A4" style={styles.page} wrap>
         <Header generatedAt={generatedAt} filterSummary={filterSummary} />
 
-        <View style={styles.statRow}>
-          <View>
-            <Text style={styles.statLabel}>Orders</Text>
-            <Text style={styles.statValue}>{totalOrders}</Text>
-          </View>
-          <View>
-            <Text style={styles.statLabel}>Total value</Text>
-            <Text style={styles.statValue}>{money(totalValue)}</Text>
-          </View>
-          <View>
-            <Text style={styles.statLabel}>Units</Text>
-            <Text style={styles.statValue}>{totalUnits}</Text>
-          </View>
+        <View style={styles.merchSummary}>
+          <Text style={styles.merchTitle}>Merch sold (paid orders only)</Text>
+          {merchSummary.products.map((product) => (
+            <View style={styles.merchRow} key={product.slug}>
+              <Text style={styles.merchProduct}>{product.name}</Text>
+              <Text style={styles.merchUnits}>{Number(product.units_sold).toLocaleString('en-LK')} units</Text>
+              <Text style={styles.merchRevenue}>{money(Number(product.revenue))}</Text>
+            </View>
+          ))}
+          <View style={styles.merchRule} />
+          <View style={styles.merchRow}><Text style={styles.merchTotalLabel}>TOTAL TEES (INCL. BUNDLES)</Text><Text style={styles.merchTotalValue}>{merchSummary.totalTees.toLocaleString('en-LK')}</Text></View>
+          <View style={styles.merchRow}><Text style={styles.merchTotalLabel}>TOTAL BANDS (INCL. BUNDLES)</Text><Text style={styles.merchTotalValue}>{merchSummary.totalBands.toLocaleString('en-LK')}</Text></View>
+          <View style={styles.merchRow}><Text style={styles.merchTotalLabel}>TOTAL CONFIRMED REVENUE</Text><Text style={styles.merchTotalValue}>{money(merchSummary.confirmedRevenue)}</Text></View>
+          <Text style={styles.clarifier}>
+            This summary counts approved orders only, with bundles split into their tee and wristband. The order table below lists every order regardless of status - {merchSummary.awaitingPayment} still awaiting payment, {merchSummary.rejected} rejected - which is why its own totals run higher.
+          </Text>
         </View>
 
         {sizeBreakdown.length > 0 && (

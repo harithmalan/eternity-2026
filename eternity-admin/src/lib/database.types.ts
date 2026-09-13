@@ -270,6 +270,19 @@ export type AdminOrderRow = {
 export type SizeBreakdownRow = { size: string; units: number };
 export type BatchBreakdownRow = { batch: string; orders: number; value: number };
 export type RevenueSummaryRow = { status: OrderStatus; orders: number; value: number };
+/** `distribution_queue` VIEW — one event-day handover row per order item. */
+export type DistributionQueueRow = {
+  item_id: string;
+  order_code: string;
+  full_name: string;
+  phone: string;
+  product_name: string;
+  size: string | null;
+  distributed_at: string | null;
+  distributed_by_name: string | null;
+};
+/** `distribution_progress` VIEW — one row containing the live handover count. */
+export type DistributionProgressRow = { distributed: number; total: number };
 /** `tees_and_bands_sold` VIEW — confirmed merchandise, with bundles exploded. */
 export type TeesAndBandsSoldRow = { total_tees: number; total_bands: number };
 /** `product_totals` VIEW — confirmed units and revenue by sellable product. */
@@ -308,6 +321,8 @@ export type Database = {
       size_breakdown: View<SizeBreakdownRow>;
       batch_breakdown: View<BatchBreakdownRow>;
       revenue_summary: View<RevenueSummaryRow>;
+      distribution_queue: View<DistributionQueueRow>;
+      distribution_progress: View<DistributionProgressRow>;
       tees_and_bands_sold: View<TeesAndBandsSoldRow>;
       product_totals: View<ProductTotalsRow>;
     };
@@ -319,6 +334,14 @@ export type Database = {
       check_in_pass: {
         Args: { p_pass_id: string; p_checked_in_at?: string };
         Returns: { out_pass_id: string; already_checked_in: boolean; out_checked_in_at: string; out_checked_in_by: string | null }[];
+      };
+      mark_distributed: {
+        Args: { item_id: string };
+        Returns: void;
+      };
+      undo_distributed: {
+        Args: { item_id: string };
+        Returns: void;
       };
     };
     Enums: Record<string, never>;

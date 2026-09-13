@@ -1,6 +1,7 @@
 import { createElement, useMemo, useState } from 'react';
 import { EMPTY_FILTERS, useOrders, type OrderFilters } from '../hooks/useOrders';
 import { useBatches, useCenters, useProducts, useSizeChart } from '../hooks/useAdminData';
+import { useExportMerchSummary } from '../hooks/useExportMerchSummary';
 import OrderFilterBar, { ATTENDEE_LABEL, STATUS_LABEL } from '../components/OrderFilterBar';
 import { downloadBlob, ordersToCsv } from '../lib/csv';
 import type { BatchBreakdownEntry, SizeBreakdownEntry } from '../pdf/OrdersReport';
@@ -16,6 +17,7 @@ export default function Export() {
   const { data: centers } = useCenters();
   const { data: products } = useProducts();
   const { data: sizeChart } = useSizeChart();
+  const { summary: merchSummary, loading: merchLoading } = useExportMerchSummary();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
 
   const productNames = useMemo(() => Array.from(new Set(products.map((p) => p.name))), [products]);
@@ -62,13 +64,15 @@ export default function Export() {
   }, [filters]);
 
   const exportCsv = () => {
+    if (!merchSummary) return;
     setExporting('csv');
-    const csv = ordersToCsv(orders);
+    const csv = ordersToCsv(orders, merchSummary);
     downloadBlob(csv, `eternity-orders-${today()}.csv`, 'text/csv;charset=utf-8');
     setExporting(null);
   };
 
   const exportPdf = async () => {
+    if (!merchSummary) return;
     setExporting('pdf');
     // @react-pdf/renderer pulls in a full PDF layout engine + font parser —
     // heavy enough that it shouldn't be in the main bundle every admin
@@ -90,6 +94,7 @@ export default function Export() {
       batchBreakdown,
       filterSummary: filterSummary || 'All orders',
       generatedAt: new Date(),
+      merchSummary,
     }) as Parameters<typeof pdf>[0];
     const blob = await pdf(element).toBlob();
     downloadBlob(blob, `eternity-orders-${today()}.pdf`, 'application/pdf');
@@ -104,10 +109,10 @@ export default function Export() {
           <h1 className="page-title">Export</h1>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost" disabled={loading || exporting !== null} onClick={exportCsv}>
+          <button className="btn btn-ghost" disabled={loading || merchLoading || exporting !== null} onClick={exportCsv}>
             {exporting === 'csv' ? 'Preparing…' : 'Export CSV'}
           </button>
-          <button className="btn btn-gold" disabled={loading || exporting !== null} onClick={exportPdf}>
+          <button className="btn btn-gold" disabled={loading || merchLoading || exporting !== null} onClick={exportPdf}>
             {exporting === 'pdf' ? 'Preparing…' : 'Export PDF'}
           </button>
         </div>

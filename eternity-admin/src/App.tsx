@@ -16,6 +16,7 @@ import Stock from './pages/Stock';
 import Emails from './pages/Emails';
 import Members from './pages/Members';
 import Launch from './pages/Launch';
+import Distribution from './pages/Distribution';
 // Renamed on import — this app's own auth-gate component below is also
 // named `Gate`, and that one wins the bare name since it's declared here.
 import EntryGate from './pages/Gate';
@@ -89,6 +90,7 @@ function Gate() {
         <Route path="/features" element={<Features />} />
         <Route path="/products" element={<Products />} />
         <Route path="/stock" element={<Stock />} />
+        <Route path="/distribution" element={<Distribution />} />
         <Route path="/emails" element={<Emails />} />
         <Route path="/members" element={<MembersRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
