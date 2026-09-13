@@ -18,7 +18,8 @@ export default function Distribution() {
   const filteredGroups = useMemo(() => {
     const term = query.trim().toLowerCase();
     const matches = term
-      ? queue.filter((item) => [item.full_name, item.order_code, item.phone].some((value) => value.toLowerCase().includes(term)))
+      ? queue.filter((item) => [item.full_name, item.order_code, item.phone]
+        .some((value) => String(value ?? '').toLowerCase().includes(term)))
       : queue;
     const groups = new Map<string, DistributionQueueRow[]>();
     matches.forEach((item) => groups.set(item.order_code, [...(groups.get(item.order_code) ?? []), item]));
