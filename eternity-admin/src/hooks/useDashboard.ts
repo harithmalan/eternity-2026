@@ -11,6 +11,8 @@ export interface DashboardData {
   totalOrders: number;
   confirmedRevenue: number;
   unitsSold: number;
+  pendingAlumniCount: number;
+  pendingSliitCount: number;
 }
 
 export function useDashboard() {
@@ -21,11 +23,13 @@ export function useDashboard() {
     let alive = true;
 
     (async () => {
-      const [revenueRes, sizeRes, batchRes, confirmedOrdersRes] = await Promise.all([
+      const [revenueRes, sizeRes, batchRes, confirmedOrdersRes, pendingAlumniRes, pendingSliitRes] = await Promise.all([
         supabase.from('revenue_summary').select('*'),
         supabase.from('size_breakdown').select('*'),
         supabase.from('batch_breakdown').select('*'),
         supabase.from('orders').select('id').in('status', CONFIRMED),
+        supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('kind', 'alumni_rsvp').eq('status', 'pending'),
+        supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('kind', 'sliit_student').eq('status', 'pending'),
       ]);
 
       if (!alive) return;
@@ -54,6 +58,8 @@ export function useDashboard() {
         totalOrders,
         confirmedRevenue,
         unitsSold,
+        pendingAlumniCount: pendingAlumniRes.count ?? 0,
+        pendingSliitCount: pendingSliitRes.count ?? 0,
       });
       setLoading(false);
     })();

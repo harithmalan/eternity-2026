@@ -7,6 +7,7 @@ import Shell from './components/Shell';
 import Dashboard from './pages/Dashboard';
 import Posts from './pages/Posts';
 import Orders from './pages/Orders';
+import Registrations from './pages/Registrations';
 import Export from './pages/Export';
 import Reveals from './pages/Reveals';
 import Artists from './pages/Artists';
@@ -84,6 +85,8 @@ function Gate() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/posts" element={<Posts />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/registrations" element={<Registrations />} />
+        <Route path="/alumni-rsvps" element={<Registrations />} />
         <Route path="/export" element={<Export />} />
         <Route path="/reveals" element={<Reveals />} />
         <Route path="/artists" element={<Artists />} />

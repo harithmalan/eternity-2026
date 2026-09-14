@@ -176,12 +176,40 @@ export type Order = {
 
 export type Pass = {
   id: string;
-  order_id: string;
+  order_id: string | null;
+  registration_id: string | null;
   user_id: string;
   checked_in_at: string | null;
   checked_in_by: string | null;
   void_reason: string | null;
   created_at: string;
+};
+
+export type RegistrationKind = 'alumni_rsvp' | 'sliit_student';
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected';
+
+export type Registration = {
+  id: string;
+  user_id: string;
+  kind: RegistrationKind;
+  status: RegistrationStatus;
+  full_name: string;
+  phone: string;
+  nic: string | null;
+  center: string;
+  code: string | null;
+  pass_id: string | null;
+  student_id_path: string | null;
+  rejection_reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RegistrationQueueRow = Registration & {
+  pass_code: string | null;
+  checked_in_at: string | null;
 };
 
 /** `gate_manifest` VIEW — everything a gate device needs to resolve a scan offline. */
@@ -308,6 +336,7 @@ export type Database = {
       orders: Table<Order>;
       order_items: Table<OrderItem>;
       passes: Table<Pass>;
+      registrations: Table<Registration>;
       email_outbox: Table<EmailOutboxRow>;
       posts: Table<Post>;
       post_media: Table<PostMedia>;
@@ -325,6 +354,7 @@ export type Database = {
       distribution_progress: View<DistributionProgressRow>;
       tees_and_bands_sold: View<TeesAndBandsSoldRow>;
       product_totals: View<ProductTotalsRow>;
+      registration_queue: View<RegistrationQueueRow>;
     };
     Functions: {
       set_launch_state: {

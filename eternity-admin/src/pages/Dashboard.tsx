@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useDashboard } from '../hooks/useDashboard';
 import { useMerchSold } from '../hooks/useMerchSold';
 import BarChart from '../components/BarChart';
@@ -54,6 +55,14 @@ export default function Dashboard() {
           <div className="k">Units sold</div>
           <div className="v">{data.unitsSold}</div>
         </div>
+        <Link to="/registrations?tab=alumni_rsvp" className="stat-card" style={{ display: 'block' }}>
+          <div className="k">Alumni pending review</div>
+          <div className="v gold">{data.pendingAlumniCount}</div>
+        </Link>
+        <Link to="/registrations?tab=sliit_student" className="stat-card" style={{ display: 'block' }}>
+          <div className="k">SLIIT student IDs pending review</div>
+          <div className="v gold">{data.pendingSliitCount}</div>
+        </Link>
       </div>
 
       <div className="panel">

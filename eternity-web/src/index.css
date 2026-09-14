@@ -465,7 +465,7 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
   width: 100vw; height: 100vh; background: var(--void); margin: 0; border: none;
 }
 .pass-eyebrow { font-family: var(--f-mono); font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--gold); margin: 0 0 24px; }
-.pass-qr-wrap { display: inline-block; background: #fff; padding: 16px; border-radius: 14px; line-height: 0; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
+.pass-qr-wrap { display: inline-block; background: #fff; padding: 16px; border-radius: 0; line-height: 0; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
 .pass-card.admitted .pass-qr-wrap { filter: grayscale(1); }
 .pass-qr-wrap canvas { display: block; width: 240px; height: 240px; }
 .pass-code { font-family: var(--f-mono); font-size: 18px; letter-spacing: .2em; color: var(--chrome); margin: 22px 0 4px; }
@@ -479,6 +479,31 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
 .pass-download { margin-top: 24px; }
 .pass-home-hint { display: none; font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .04em; color: var(--dust-dim); margin: 14px 0 0; }
 @media (max-width: 640px) { .pass-home-hint { display: block; } }
+
+/* Alumni RSVP is intentionally an identity check, never a merch checkout. */
+.alumni-page { min-height: 100svh; padding-top: clamp(120px, 16vw, 170px); }
+.alumni-inner { max-width: 620px; }
+.alumni-copy { color: var(--dust); font-size: 14px; font-weight: 300; line-height: 1.75; margin: 18px 0 28px; max-width: 560px; }
+.alumni-form { border-top: 1px solid var(--line); padding-top: 26px; }
+.alumni-form .field { margin-bottom: 18px; }
+.alumni-form .field input, .alumni-form .field select { border-radius: 0; font-family: var(--f-body); font-size: 14px; }
+.alumni-rejected { border: 1px solid var(--line-strong); color: var(--dust); font-size: 13px; line-height: 1.6; margin: 0 0 24px; padding: 15px 16px; }
+.alumni-rejected strong { color: var(--chrome); font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+.alumni-status { border-top: 1px solid var(--line); padding-top: 26px; }
+.student-id-drop {
+  display: flex; align-items: center; justify-content: center; min-height: 150px; border: 1px dashed var(--line-strong);
+  color: var(--dust); cursor: pointer; padding: 20px; text-align: center;
+}
+.student-id-drop input { display: none; }
+.student-id-drop span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+.student-id-preview { border: 1px solid var(--line); background: rgba(5, 5, 7, .45); }
+.student-id-preview img { width: 100%; max-height: 320px; object-fit: contain; background: #050507; }
+.student-id-preview-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border-top: 1px solid var(--line); padding: 12px;
+}
+.student-id-preview-foot span { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dust-dim); }
+@media (max-width: 420px) { .alumni-page { padding-top: 108px; } }
 
 .order-card { border: 1px solid var(--line); background: rgba(11, 11, 16, .82); padding: 26px; }
 .order-card + .order-card { margin-top: 16px; }

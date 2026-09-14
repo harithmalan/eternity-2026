@@ -5,6 +5,8 @@ import FeedPage from './pages/FeedPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import AlumniPage from './pages/AlumniPage';
+import SliitStudentsPage from './pages/SliitStudentsPage';
 import SectionPlaceholder from './pages/SectionPlaceholder';
 import { ToastProvider } from './components/Toast';
 import { FeaturesProvider } from './lib/features';
@@ -36,6 +38,8 @@ function Routed() {
       />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/alumni" element={<Layout><AlumniPage /></Layout>} />
+      <Route path="/sliit-students" element={<Layout><SliitStudentsPage /></Layout>} />
       <Route
         path="/lineup"
         element={
@@ -100,3 +104,4 @@ export default function App() {
     </ToastProvider>
   );
 }
+11

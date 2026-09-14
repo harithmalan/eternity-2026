@@ -185,10 +185,36 @@ export type Order = {
 
 export type Pass = {
   id: string;
-  order_id: string;
+  order_id: string | null;
+  registration_id: string | null;
   user_id: string;
   checked_in_at: string | null;
+  checked_in_by: string | null;
+  void_reason: string | null;
   created_at: string;
+};
+
+export type RegistrationKind = 'alumni_rsvp' | 'sliit_student';
+export type RegistrationStatus = 'pending' | 'approved' | 'rejected';
+
+/** Free-entry identity RSVP. A pass is attached only after committee approval. */
+export type Registration = {
+  id: string;
+  user_id: string;
+  kind: RegistrationKind;
+  status: RegistrationStatus;
+  full_name: string;
+  phone: string;
+  nic: string | null;
+  center: string;
+  code: string | null;
+  pass_id: string | null;
+  student_id_path: string | null;
+  rejection_reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type OrderItem = {
@@ -236,6 +262,7 @@ export type Database = {
       orders: Table<Order>;
       order_items: Table<OrderItem>;
       passes: Table<Pass>;
+      registrations: Table<Registration>;
       post_likes: Table<PostLike>;
     };
     Views: {
