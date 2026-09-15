@@ -215,14 +215,8 @@ Deno.serve(async (_req: Request) => {
           to: row.to_name ? `${row.to_name} <${row.to_email}>` : row.to_email,
           replyTo,
           subject: email.subject,
-          // Built explicitly rather than passed via the `content`/`html`
-          // shortcuts: same quoted-printable + charset denomailer applies
-          // by default, just spelled out here instead of left implicit, so
-          // it can't silently drift if that default ever changes.
-          mimeContent: [
-            { mimeType: 'text/plain; charset="utf-8"', content: email.text, transferEncoding: 'quoted-printable' },
-            { mimeType: 'text/html; charset="utf-8"', content: email.html, transferEncoding: 'quoted-printable' },
-          ],
+          html: email.html,
+          content: email.text,
         });
 
         await supabase

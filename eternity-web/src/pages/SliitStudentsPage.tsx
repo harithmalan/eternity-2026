@@ -41,7 +41,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-async function compressPhoto(file: File, userId: string): Promise<PreparedPhoto> {
+async function compressPhoto(file: File, userId: string | null): Promise<PreparedPhoto> {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error('Choose a photo under 10MB.');
 
   const image = await loadImage(file);
@@ -64,7 +64,8 @@ async function compressPhoto(file: File, userId: string): Promise<PreparedPhoto>
   if (!blob) throw new Error('Could not compress that photo.');
   const rawExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
   const ext = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(rawExt) ? rawExt : 'jpg';
-  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const prefix = userId ? userId : 'guest';
+  const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
   return { blob, path, previewUrl: URL.createObjectURL(blob), bytes: blob.size };
 }
 
@@ -84,6 +85,8 @@ export default function SliitStudentsPage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [center, setCenter] = useState('Colombo');
+  const [email, setEmail] = useState('');
+  const [isGuestSubmitted, setIsGuestSubmitted] = useState(false);
   const [photo, setPhoto] = useState<PreparedPhoto | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -141,7 +144,6 @@ export default function SliitStudentsPage() {
     if (authLoading) return;
     if (!user) {
       setLoading(false);
-      openSignIn(SIGN_IN_LEDE);
       return;
     }
     loadRegistration();
@@ -162,7 +164,9 @@ export default function SliitStudentsPage() {
     setFullName(profile.full_name ?? '');
     setPhone(profile.phone ?? '');
     setCenter(profile.center || 'Colombo');
-  }, [profile, registration]);
+    if (user?.email) setEmail(user.email);
+    else if (profile?.email) setEmail(profile.email);
+  }, [profile, registration, user]);
 
   useEffect(() => () => {
     if (photo) URL.revokeObjectURL(photo.previewUrl);
@@ -171,11 +175,11 @@ export default function SliitStudentsPage() {
   const choosePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || !user) return;
+    if (!file) return;
     setPhotoBusy(true);
     setError(null);
     try {
-      const prepared = await compressPhoto(file, user.id);
+      const prepared = await compressPhoto(file, user?.id ?? null);
       setPhoto((current) => {
         if (current) URL.revokeObjectURL(current.previewUrl);
         return prepared;
@@ -190,8 +194,12 @@ export default function SliitStudentsPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!fullName.trim() || !center) {
+    if (!fullName.trim() || !center || (!user && !email.trim())) {
       setError('Fill in every field before registering.');
+      return;
+    }
+    if (!user && !email.includes('@')) {
+      setError('Enter a valid email address.');
       return;
     }
     if (!PHONE_RE.test(phone.trim())) {
@@ -207,12 +215,14 @@ export default function SliitStudentsPage() {
       setError('Upload a new student ID photo before resubmitting.');
       return;
     }
-    if (!user || !photo) return;
+    if (!photo) return;
 
     setSubmitting(true);
-    await saveProfile({ full_name: fullName.trim(), phone: phone.trim(), center });
+    if (user) {
+      await saveProfile({ full_name: fullName.trim(), phone: phone.trim(), center });
+    }
 
-    if (!registration) {
+    if (!registration && user) {
       const { data: existing, error: existingError } = await supabase
         .from('registrations')
         .select('*')
@@ -245,7 +255,8 @@ export default function SliitStudentsPage() {
     }
 
     const objectName = photo.path.split('/').pop() ?? '';
-    const { data: storedRows, error: verifyError } = await supabase.storage.from('student-ids').list(user.id, { search: objectName, limit: 1 });
+    const folder = user ? user.id : 'guest';
+    const { data: storedRows, error: verifyError } = await supabase.storage.from('student-ids').list(folder, { search: objectName, limit: 1 });
     const storedRow = storedRows?.find((row) => row.name === objectName);
     const storedSize = storedRow ? storageObjectSize(storedRow) : null;
     if (verifyError || !storedRow) {
@@ -265,11 +276,11 @@ export default function SliitStudentsPage() {
       phone: phone.trim(),
       center,
       id_photo_path: photo.path,
-      email: user.email ?? profile?.email ?? null,
+      email: user?.email ?? profile?.email ?? email.trim(),
     };
     const result = registration?.status === 'rejected'
       ? await supabase.from('registrations').update({ ...values, status: 'pending', rejection_reason: null }).eq('id', registration.id)
-      : await supabase.from('registrations').insert({ ...values, user_id: user.id, kind: 'sliit_student' });
+      : await supabase.from('registrations').insert({ ...values, user_id: user?.id ?? null, kind: 'sliit_student' });
 
     if (result.error) {
       console.error('Registration insert error:', JSON.stringify(result.error, null, 2));
@@ -281,19 +292,24 @@ export default function SliitStudentsPage() {
       setSubmitting(false);
       return;
     }
-    await loadRegistration();
+    if (user) {
+      await loadRegistration();
+    } else {
+      setIsGuestSubmitted(true);
+    }
     setPhoto(null);
     setSubmitting(false);
   };
 
   if (authLoading || loading || centersLoading) return <StudentShell><p className="page-note">Loading your RSVP...</p></StudentShell>;
-  if (!user) {
+  if (isGuestSubmitted) {
     return (
       <StudentShell>
-        <p className="eyebrow">SLIIT student entry</p>
-        <h1 className="sec-title">Step into <i>ETERNITY.</i></h1>
-        <p className="alumni-copy">Sign in to register for free SLIIT student entry.</p>
-        <button className="btn btn-gold" onClick={() => openSignIn(SIGN_IN_LEDE)}>Sign in</button>
+        <div className="alumni-status">
+          <p className="eyebrow">Pending</p>
+          <h1 className="sec-title">We have your <i>details.</i></h1>
+          <p className="alumni-copy">We're checking your student ID — this can take a little longer than the alumni review. Since you are not logged in, you will receive your pass via email once approved.</p>
+        </div>
       </StudentShell>
     );
   }
@@ -326,6 +342,7 @@ export default function SliitStudentsPage() {
       )}
       <form className="alumni-form" onSubmit={submit}>
         <div className="field"><label>Full name <span className="req">*</span></label><input required value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" /></div>
+        {!user && <div className="field"><label>Email <span className="req">*</span></label><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div>}
         <div className="field"><label>Phone <span className="req">*</span></label><input required value={phone} onChange={(event) => setPhone(event.target.value)} onBlur={() => setPhoneTouched(true)} inputMode="tel" autoComplete="tel" />{phoneTouched && phone && !PHONE_RE.test(phone.trim()) && <p className="avail-warn">Enter a valid Sri Lankan mobile number.</p>}</div>
         <div className="field"><label>Center <span className="req">*</span></label><select required value={center} onChange={(event) => setCenter(event.target.value)}>{centers.map((item) => <option key={item.code} value={item.code}>{item.code}</option>)}</select></div>
         <div className="field">

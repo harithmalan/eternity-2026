@@ -23,6 +23,8 @@ export default function AlumniPage() {
   const [phone, setPhone] = useState('');
   const [nic, setNic] = useState('');
   const [center, setCenter] = useState('Colombo');
+  const [email, setEmail] = useState('');
+  const [isGuestSubmitted, setIsGuestSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nicTouched, setNicTouched] = useState(false);
@@ -80,7 +82,6 @@ export default function AlumniPage() {
     if (authLoading) return;
     if (!user) {
       setLoading(false);
-      openSignIn(ALUMNI_SIGN_IN_LEDE);
       return;
     }
     loadRegistration();
@@ -101,14 +102,20 @@ export default function AlumniPage() {
     setFullName(profile.full_name ?? '');
     setPhone(profile.phone ?? '');
     setCenter(profile.center || 'Colombo');
-  }, [profile, registration]);
+    if (user?.email) setEmail(user.email);
+    else if (profile?.email) setEmail(profile.email);
+  }, [profile, registration, user]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
     const normalizedNic = normalizeNic(nic);
-    if (!fullName.trim() || !center) {
+    if (!fullName.trim() || !center || (!user && !email.trim())) {
       setError('Fill in every field before registering.');
+      return;
+    }
+    if (!user && !email.includes('@')) {
+      setError('Enter a valid email address.');
       return;
     }
     if (!normalizedNic) {
@@ -126,12 +133,12 @@ export default function AlumniPage() {
       setError('Enter a valid Sri Lankan mobile number.');
       return;
     }
-    if (!user) return;
-
     setSubmitting(true);
-    await saveProfile({ full_name: fullName.trim(), phone: phone.trim(), center });
+    if (user) {
+      await saveProfile({ full_name: fullName.trim(), phone: phone.trim(), center });
+    }
 
-    if (!registration) {
+    if (!registration && user) {
       const { data: existing, error: existingError } = await supabase
         .from('registrations')
         .select('*')
@@ -164,11 +171,11 @@ export default function AlumniPage() {
       phone: phone.trim(),
       nic: normalizedNic,
       center,
-      email: user.email ?? profile?.email ?? null,
+      email: user?.email ?? profile?.email ?? email.trim(),
     };
     const result = registration?.status === 'rejected'
       ? await supabase.from('registrations').update({ ...values, status: 'pending', rejection_reason: null }).eq('id', registration.id)
-      : await supabase.from('registrations').insert({ ...values, user_id: user.id, kind: 'alumni_rsvp' });
+      : await supabase.from('registrations').insert({ ...values, user_id: user?.id ?? null, kind: 'alumni_rsvp' });
 
     if (result.error) {
       console.error('Registration insert error:', result.error);
@@ -180,20 +187,17 @@ export default function AlumniPage() {
       setSubmitting(false);
       return;
     }
-    await loadRegistration();
+    if (user) {
+      await loadRegistration();
+    } else {
+      setIsGuestSubmitted(true);
+    }
     setSubmitting(false);
   };
 
   if (authLoading || loading || centersLoading) return <AlumniShell><p className="page-note">Loading your RSVP...</p></AlumniShell>;
-  if (!user) {
-    return (
-      <AlumniShell>
-        <p className="eyebrow">Alumni entry</p>
-        <h1 className="sec-title">Come back to <i>ETERNITY.</i></h1>
-        <p className="alumni-copy">Sign in to register for free alumni entry.</p>
-        <button className="btn btn-gold" onClick={() => openSignIn(ALUMNI_SIGN_IN_LEDE)}>Sign in</button>
-      </AlumniShell>
-    );
+  if (isGuestSubmitted) {
+    return <AlumniShell><RegistrationStatus /></AlumniShell>;
   }
 
   if (registration?.status === 'pending') {
@@ -216,6 +220,7 @@ export default function AlumniPage() {
       )}
       <form className="alumni-form" onSubmit={submit}>
         <div className="field"><label>Full name <span className="req">*</span></label><input required value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" /></div>
+        {!user && <div className="field"><label>Email <span className="req">*</span></label><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div>}
         <div className="field"><label>Phone <span className="req">*</span></label><input required value={phone} onChange={(event) => setPhone(event.target.value)} onBlur={() => setPhoneTouched(true)} inputMode="tel" autoComplete="tel" />{phoneTouched && phone && !PHONE_RE.test(phone.trim()) && <p className="avail-warn">Enter a valid Sri Lankan mobile number.</p>}</div>
         <div className="field"><label>NIC <span className="req">*</span></label><input required value={nic} onChange={(event) => setNic(event.target.value)} onBlur={() => setNicTouched(true)} autoComplete="off" />{nicTouched && nic && !NIC_RE.test(normalizeNic(nic)) && <p className="avail-warn">Enter a valid NIC - 9 digits + V/X, or 12 digits.</p>}</div>
         <div className="field"><label>Center <span className="req">*</span></label><select required value={center} onChange={(event) => setCenter(event.target.value)}>{centers.map((item) => <option key={item.code} value={item.code}>{item.code}</option>)}</select></div>
