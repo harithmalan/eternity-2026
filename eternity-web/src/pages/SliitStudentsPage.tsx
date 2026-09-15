@@ -112,9 +112,24 @@ export default function SliitStudentsPage() {
       setFullName(data.full_name);
       setPhone(data.phone);
       setCenter(data.center);
-      if (data.status === 'approved' && data.pass_id) {
-        const { data: passRow } = await supabase.from('passes').select('*').eq('id', data.pass_id).maybeSingle();
+      if (data.status === 'approved') {
+        // Try by pass_id first, then fall back to querying by registration_id
+        // in case the trigger hasn't written pass_id back yet.
+        let passRow = null;
+        if (data.pass_id) {
+          const { data: row } = await supabase.from('passes').select('*').eq('id', data.pass_id).maybeSingle();
+          passRow = row;
+        }
+        if (!passRow) {
+          const { data: row } = await supabase.from('passes').select('*').eq('registration_id', data.id).maybeSingle();
+          passRow = row;
+        }
         setPass(passRow ?? null);
+
+        // If still no pass, the trigger might not have fired yet — retry once.
+        if (!passRow) {
+          setTimeout(loadRegistration, 2000);
+        }
       } else {
         setPass(null);
       }
@@ -250,7 +265,6 @@ export default function SliitStudentsPage() {
       phone: phone.trim(),
       center,
       student_id_path: photo.path,
-      nic: null,
       email: user.email ?? profile?.email ?? null,
     };
     const result = registration?.status === 'rejected'
@@ -258,7 +272,7 @@ export default function SliitStudentsPage() {
       : await supabase.from('registrations').insert({ ...values, user_id: user.id, kind: 'sliit_student' });
 
     if (result.error) {
-      console.error('Registration insert error:', result.error);
+      console.error('Registration insert error:', JSON.stringify(result.error, null, 2));
       if (result.error.code === '23505') {
         setError('A SLIIT student RSVP is already pending or approved for this account.');
       } else {

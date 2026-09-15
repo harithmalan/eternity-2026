@@ -56,16 +56,27 @@ export function useMyOrders(userId: string | undefined) {
     }
 
     let freeList: FreeEntryPass[] = [];
-    const approvedRegsWithPass = regRows.filter((r) => r.pass_id);
-    if (approvedRegsWithPass.length > 0) {
-      const passIds = approvedRegsWithPass.map((r) => r.pass_id!);
-      const { data: passRows } = await supabase.from('passes').select('*').in('id', passIds);
-      const passById = new Map<string, Pass>();
-      (passRows ?? []).forEach((p) => passById.set(p.id, p));
+    const approvedRegs = regRows.filter((r) => r.status === 'approved');
+    if (approvedRegs.length > 0) {
+      // Fetch passes by pass_id (primary) and by registration_id (fallback
+      // for when the trigger hasn't written pass_id back yet).
+      const withPassId = approvedRegs.filter((r) => r.pass_id);
+      const regIds = approvedRegs.map((r) => r.id);
+      const [byIdRes, byRegRes] = await Promise.all([
+        withPassId.length > 0
+          ? supabase.from('passes').select('*').in('id', withPassId.map((r) => r.pass_id!))
+          : Promise.resolve({ data: [] as Pass[] }),
+        supabase.from('passes').select('*').in('registration_id', regIds),
+      ]);
 
-      freeList = approvedRegsWithPass
+      const passById = new Map<string, Pass>();
+      (byIdRes.data ?? []).forEach((p) => passById.set(p.id, p));
+      const passByReg = new Map<string, Pass>();
+      (byRegRes.data ?? []).forEach((p) => { if (p.registration_id) passByReg.set(p.registration_id, p); });
+
+      freeList = approvedRegs
         .map((r) => {
-          const p = passById.get(r.pass_id!);
+          const p = (r.pass_id ? passById.get(r.pass_id) : undefined) ?? passByReg.get(r.id);
           return p ? { registration: r, pass: p } : null;
         })
         .filter((item): item is FreeEntryPass => item !== null);
