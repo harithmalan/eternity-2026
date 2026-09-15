@@ -64,7 +64,7 @@ export default function Gate() {
       const { count, rowFailures, photoFailures } = await downloadManifest(setDownloadProgress);
       setEverDownloaded(true);
       if (count === 0) {
-        setDownloadNote('The manifest came back empty — no approved alumni orders yet. Try again closer to the event.');
+        setDownloadNote('The manifest came back empty — no approved passes yet (orders, alumni RSVPs, or SLIIT students). Try again closer to the event.');
       } else if (rowFailures > 0) {
         setDownloadNote(`Cached ${count} pass${count === 1 ? '' : 'es'}, but ${rowFailures} row${rowFailures === 1 ? '' : 's'} couldn't be read — see the console for which ones. ${photoFailures > 0 ? `${photoFailures} photo${photoFailures === 1 ? '' : 's'} also failed to cache.` : ''}`);
       } else if (photoFailures > 0) {

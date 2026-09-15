@@ -367,6 +367,49 @@ Manage your order: ${siteUrl}/my-orders${textFooter()}`;
   };
 }
 
+export interface PassIssuedPayload {
+  name: string;
+  pass_id: string;   // uuid — the QR payload; check_in_pass() accepts either uuid or code
+  pass_code: string; // human-readable: ETR-1029-4K7 / ALM-2034-UP9 / GST-…
+}
+
+function passIssued(p: PassIssuedPayload, _settings: EmailSettings, _siteUrl: string, assetsUrl: string): RenderedEmail {
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(p.pass_id)}`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 22px;">Entry is admitted on this pass alone — no account or login needed at the gate.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 20px;">
+      <tr><td align="center" style="background-color:#ffffff;padding:16px;">
+        <img src="${qrUrl}" width="220" height="220" alt="Entry QR code" style="display:block;width:220px;height:220px;border:0;" />
+      </td></tr>
+    </table>
+    <p style="margin:0 0 6px;text-align:center;font-family:${MONO};font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:${DUST};">If the scanner can&rsquo;t read the code, read this out at the gate instead</p>
+    <p style="margin:0 0 22px;text-align:center;font-family:${MONO};font-size:22px;letter-spacing:3px;color:${CHROME};">${esc(p.pass_code)}</p>
+    <p style="margin:0;color:${DUST};font-family:${SANS};font-size:14px;">Keep this email on your phone. Eternity is on <b style="color:${CHROME};">18 September 2026</b>, Colombo.</p>`;
+
+  const text = `You're on the list, ${p.name}.
+
+Entry is admitted on this pass alone — no account or login needed at the gate.
+
+Your QR code: ${qrUrl}
+
+If the scanner can't read the code, read this out at the gate instead:
+${p.pass_code}
+
+Keep this email on your phone. Eternity is on 18 September 2026, Colombo.${textFooter()}`;
+
+  return {
+    subject: `Your Eternity entry pass`,
+    html: layout({
+      assetsUrl,
+      eyebrow: 'Entry pass',
+      heading: `You're on the list, ${esc(p.name)}.`,
+      bodyHtml,
+    }),
+    text,
+  };
+}
+
 // deno-lint-ignore no-explicit-any
 const RENDERERS: Record<string, (p: any, s: EmailSettings, siteUrl: string, assetsUrl: string) => RenderedEmail> = {
   welcome,
@@ -374,6 +417,7 @@ const RENDERERS: Record<string, (p: any, s: EmailSettings, siteUrl: string, asse
   payment_verified: paymentVerified,
   payment_rejected: paymentRejected,
   ready_for_collection: readyForCollection,
+  pass_issued: passIssued,
 };
 
 // Trailing whitespace at the end of a line is exactly what forces a

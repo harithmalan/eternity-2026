@@ -211,8 +211,31 @@ export default function AlumniPage() {
   );
 }
 
+const WA_CONTACTS = [
+  { who: 'Alex',   num: '+94 70 654 4700', wa: '94706544700' },
+  { who: 'Harith', num: '+94 76 857 0754', wa: '94768570754' },
+  { who: 'Minol',  num: '+94 76 537 3271', wa: '94765373271' },
+];
+
 function AlumniShell({ children }: { children: React.ReactNode }) {
-  return <section className="band alumni-page"><div className="shell alumni-inner">{children}</div></section>;
+  return (
+    <section className="band alumni-page">
+      <div className="shell">
+        <div className="alumni-inner">{children}</div>
+        <div className="page-wa-block">
+          <p className="page-wa-lede">Having trouble registering, or didn&apos;t get your pass? Message us directly.</p>
+          <div className="contacts">
+            {WA_CONTACTS.map((c) => (
+              <a key={c.who} className="contact" href={`https://wa.me/${c.wa}`} target="_blank" rel="noopener noreferrer">
+                <div><div className="who">{c.who}</div><div className="num">{c.num}</div></div>
+                <span className="arrow">→</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function RegistrationStatus() {

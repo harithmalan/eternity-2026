@@ -570,6 +570,8 @@ tbody td { font-family: var(--f-mono); color: var(--dust); font-variant-numeric:
 }
 .student-id-preview-foot span { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--dust-dim); }
 @media (max-width: 420px) { .alumni-page { padding-top: 108px; } }
+.page-wa-block { border-top: 1px solid var(--line); margin-top: 56px; padding-top: 36px; padding-bottom: 64px; }
+.page-wa-lede { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--dust); margin: 0 0 22px; }
 
 .order-card { border: 1px solid var(--line); background: rgba(11, 11, 16, .82); padding: 26px; }
 .order-card + .order-card { margin-top: 16px; }
