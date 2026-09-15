@@ -248,6 +248,7 @@ export default function SliitStudentsPage() {
       center,
       student_id_path: photo.path,
       nic: null,
+      email: user.email ?? profile?.email ?? null,
     };
     const result = registration?.status === 'rejected'
       ? await supabase.from('registrations').update({ ...values, status: 'pending', rejection_reason: null }).eq('id', registration.id)

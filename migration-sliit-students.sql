@@ -2,7 +2,9 @@
 -- Run after migration-alumni-rsvp.sql. Safe to rerun.
 
 alter table registrations add column if not exists student_id_path text;
+alter table registrations add column if not exists email text;
 alter table registrations alter column nic drop not null;
+alter table registrations alter column email drop not null;
 
 alter table registrations drop constraint if exists registrations_kind_check;
 alter table registrations add constraint registrations_kind_check

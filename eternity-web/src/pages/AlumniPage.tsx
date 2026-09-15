@@ -148,6 +148,7 @@ export default function AlumniPage() {
       phone: phone.trim(),
       nic: normalizedNic,
       center,
+      email: user.email ?? profile?.email ?? null,
     };
     const result = registration?.status === 'rejected'
       ? await supabase.from('registrations').update({ ...values, status: 'pending', rejection_reason: null }).eq('id', registration.id)

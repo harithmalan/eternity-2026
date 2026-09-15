@@ -195,6 +195,7 @@ export type Registration = {
   status: RegistrationStatus;
   full_name: string;
   phone: string;
+  email?: string | null;
   nic: string | null;
   center: string;
   code: string | null;
