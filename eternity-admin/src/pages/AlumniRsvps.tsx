@@ -55,10 +55,11 @@ export default function AlumniRsvps() {
   useEffect(() => {
     setStudentIdUrl(null);
     setStudentIdError(null);
-    if (!viewing?.student_id_path) return;
+    if (!viewing?.id_photo_path && !viewing?.student_id_path) return;
+    const photoPath = viewing.id_photo_path ?? viewing.student_id_path!;
     supabase.storage
       .from('student-ids')
-      .createSignedUrl(viewing.student_id_path, 90)
+      .createSignedUrl(photoPath, 90)
       .then(({ data, error }) => {
         if (error) setStudentIdError(error.message);
         else setStudentIdUrl(data?.signedUrl ?? null);
@@ -181,9 +182,9 @@ export default function AlumniRsvps() {
         </div>
         <div className="drawer-col">
           <div className="slip-frame">
-            {!viewing?.student_id_path && <p className="page-note">No student ID photo uploaded.</p>}
-            {viewing?.student_id_path && studentIdError && <p className="page-note">Couldn&apos;t load photo: {studentIdError}</p>}
-            {viewing?.student_id_path && !studentIdError && !studentIdUrl && <p className="page-note">Loading...</p>}
+            {!viewing?.id_photo_path && !viewing?.student_id_path && <p className="page-note">No student ID photo uploaded.</p>}
+            {(viewing?.id_photo_path || viewing?.student_id_path) && studentIdError && <p className="page-note">Couldn&apos;t load photo: {studentIdError}</p>}
+            {(viewing?.id_photo_path || viewing?.student_id_path) && !studentIdError && !studentIdUrl && <p className="page-note">Loading...</p>}
             {studentIdUrl && <img src={studentIdUrl} alt="Student ID" />}
           </div>
           {viewing && (

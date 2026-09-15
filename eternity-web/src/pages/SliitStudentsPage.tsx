@@ -264,7 +264,7 @@ export default function SliitStudentsPage() {
       full_name: fullName.trim(),
       phone: phone.trim(),
       center,
-      student_id_path: photo.path,
+      id_photo_path: photo.path,
       email: user.email ?? profile?.email ?? null,
     };
     const result = registration?.status === 'rejected'

@@ -210,6 +210,7 @@ export type Registration = {
   center: string;
   code: string | null;
   pass_id: string | null;
+  id_photo_path: string | null;
   student_id_path: string | null;
   rejection_reason: string | null;
   reviewed_by: string | null;

@@ -233,7 +233,7 @@ export default function Registrations() {
                     {activeTab === 'sliit_student' && (
                       <td>
                         <StudentIdThumbnail
-                          path={row.student_id_path}
+                          path={row.id_photo_path ?? row.student_id_path}
                           onOpenLightbox={(url) => setLightboxUrl(url)}
                         />
                       </td>
