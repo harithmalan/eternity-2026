@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LockedAction from './LockedAction';
 import NavAccount from './NavAccount';
@@ -23,6 +23,17 @@ export default function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userRegs, setUserRegs] = useState<{ kind: string; status: string }[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<number>(0);
+
+  const handleDropdownEnter = useCallback(() => {
+    clearTimeout(closeTimerRef.current);
+    setDropdownOpen(true);
+  }, []);
+
+  const handleDropdownLeave = useCallback(() => {
+    closeTimerRef.current = window.setTimeout(() => setDropdownOpen(false), 150);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -63,6 +74,12 @@ export default function Nav() {
   }, [user]);
 
   useEffect(() => {
+    // Clean up the close timer on unmount — avoids a setState-on-unmounted
+    // component warning if the user navigates away during the 150ms window.
+    return () => clearTimeout(closeTimerRef.current);
+  }, []);
+
+  useEffect(() => {
     if (!dropdownOpen) return;
     const onPointerDown = (e: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -70,7 +87,12 @@ export default function Nav() {
       }
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDropdownOpen(false);
+      if (e.key === 'Escape') {
+        setDropdownOpen(false);
+        // Return focus to the trigger so the next Tab lands in the right place
+        // (standard ARIA combobox/menu pattern).
+        triggerRef.current?.focus();
+      }
     };
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('keydown', onKeyDown);
@@ -109,10 +131,11 @@ export default function Nav() {
         <div
           className="nav-free-wrap"
           ref={dropdownRef}
-          onMouseEnter={() => setDropdownOpen(true)}
-          onMouseLeave={() => setDropdownOpen(false)}
+          onMouseEnter={handleDropdownEnter}
+          onMouseLeave={handleDropdownLeave}
         >
           <button
+            ref={triggerRef}
             className={`nav-free-trigger${dropdownOpen ? ' open' : ''}`}
             onClick={() => setDropdownOpen((v) => !v)}
             aria-expanded={dropdownOpen}
