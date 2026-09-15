@@ -403,7 +403,7 @@ Keep this email on your phone. Eternity is on 18 September 2026, Colombo.${textF
     html: layout({
       assetsUrl,
       eyebrow: 'Entry pass',
-      heading: `You're on the list, ${esc(p.name)}.`,
+      heading: `You're on the list, ${p.name}.`,
       bodyHtml,
     }),
     text,
