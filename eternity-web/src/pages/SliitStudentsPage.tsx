@@ -209,7 +209,8 @@ export default function SliitStudentsPage() {
         .maybeSingle();
 
       if (existingError) {
-        setError(existingError.message);
+        console.error('Error checking existing registration:', existingError);
+        setError('Could not verify existing registration. Please try again.');
         setSubmitting(false);
         return;
       }
@@ -222,7 +223,8 @@ export default function SliitStudentsPage() {
 
     const { error: uploadError } = await supabase.storage.from('student-ids').upload(photo.path, photo.blob, { contentType: photo.blob.type });
     if (uploadError) {
-      setError(uploadError.message);
+      console.error('Upload error:', uploadError);
+      setError('Could not upload your student ID photo. Please try again.');
       setSubmitting(false);
       return;
     }
@@ -232,7 +234,8 @@ export default function SliitStudentsPage() {
     const storedRow = storedRows?.find((row) => row.name === objectName);
     const storedSize = storedRow ? storageObjectSize(storedRow) : null;
     if (verifyError || !storedRow) {
-      setError(verifyError?.message ?? 'Photo uploaded, but we could not verify it in Storage. Try again.');
+      console.error('Photo verification error:', verifyError);
+      setError('Photo uploaded, but verification failed. Please try again.');
       setSubmitting(false);
       return;
     }
@@ -255,9 +258,12 @@ export default function SliitStudentsPage() {
       : await supabase.from('registrations').insert({ ...values, user_id: user.id, kind: 'sliit_student' });
 
     if (result.error) {
-      setError(result.error.code === '23505'
-        ? 'A SLIIT student RSVP is already pending or approved for this account.'
-        : result.error.message);
+      console.error('Registration insert error:', result.error);
+      if (result.error.code === '23505') {
+        setError('A SLIIT student RSVP is already pending or approved for this account.');
+      } else {
+        setError('Could not complete registration. Please try again or contact the committee.');
+      }
       setSubmitting(false);
       return;
     }

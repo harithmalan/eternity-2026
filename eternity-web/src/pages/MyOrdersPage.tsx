@@ -28,7 +28,7 @@ const ACCEPTED = { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': '
 
 export default function MyOrdersPage() {
   const { user } = useAuth();
-  const { orders, loading, refetch } = useMyOrders(user?.id);
+  const { orders, freePasses, loading, refetch } = useMyOrders(user?.id);
   const { say } = useToast();
 
   if (loading) {
@@ -54,7 +54,9 @@ export default function MyOrdersPage() {
     );
   }
 
-  if (orders.length === 0) {
+  const hasContent = orders.length > 0 || freePasses.length > 0;
+
+  if (!hasContent) {
     return (
       <section className="band">
         <div className="shell">
@@ -75,10 +77,20 @@ export default function MyOrdersPage() {
       <div className="shell">
         <div className="sec-head">
           <div>
-            <p className="eyebrow">Your orders</p>
+            <p className="eyebrow">Your passes & orders</p>
             <h2 className="sec-title">Track your <i>reservation</i>.</h2>
           </div>
         </div>
+
+        {freePasses.map((fp) => (
+          <PassCard
+            key={fp.pass.id}
+            pass={fp.pass}
+            holderName={fp.registration.full_name}
+            orderCode={fp.registration.code || `PASS-${fp.registration.id.slice(0, 6).toUpperCase()}`}
+          />
+        ))}
+
         {orders.map((order) => (
           <OrderCard key={order.id} order={order} onUploaded={refetch} say={say} />
         ))}

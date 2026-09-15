@@ -128,7 +128,8 @@ export default function AlumniPage() {
         .maybeSingle();
 
       if (existingError) {
-        setError(existingError.message);
+        console.error('Error checking existing registration:', existingError);
+        setError('Could not verify existing RSVP. Please try again.');
         setSubmitting(false);
         return;
       }
@@ -155,9 +156,12 @@ export default function AlumniPage() {
       : await supabase.from('registrations').insert({ ...values, user_id: user.id, kind: 'alumni_rsvp' });
 
     if (result.error) {
-      setError(result.error.code === '23505'
-        ? 'An RSVP for this alumnus is already pending or approved.'
-        : result.error.message);
+      console.error('Registration insert error:', result.error);
+      if (result.error.code === '23505') {
+        setError('An RSVP for this alumnus is already pending or approved.');
+      } else {
+        setError('Could not complete registration. Please try again or contact the committee.');
+      }
       setSubmitting(false);
       return;
     }
