@@ -105,6 +105,72 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-dropdown-item:hover { color: var(--chrome); }
 @media (max-width: 940px) { .nav-links { display: none; } }
 
+/* ── Free Entry Nav Dropdown (Desktop) ───────────────────────── */
+.nav-free-wrap { position: relative; }
+.nav-free-trigger {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--dust); transition: color .25s; padding: 4px 0;
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer; border: none; background: none;
+}
+.nav-free-trigger:hover, .nav-free-trigger.open, .nav-free-wrap:hover .nav-free-trigger { color: var(--chrome); }
+.nav-free-trigger .caret { font-size: 8px; color: var(--gold); transition: transform .2s; }
+.nav-free-trigger.open .caret { transform: rotate(180deg); }
+
+.nav-free-dropdown {
+  position: absolute; top: calc(100% + 14px); left: 50%; transform: translateX(-50%);
+  width: 270px; z-index: 70; background: var(--ink-2);
+  border: 1px solid var(--line); border-top: 1px solid var(--gold); border-radius: 0; box-shadow: none;
+  padding: 6px 0; display: flex; flex-direction: column;
+}
+.nav-free-row {
+  display: flex; flex-direction: column; padding: 12px 18px; text-align: left;
+  transition: background .2s; width: 100%; border-bottom: 1px solid rgba(232, 234, 240, .05);
+}
+.nav-free-row:last-child { border-bottom: none; }
+.nav-free-row:hover { background: rgba(232, 234, 240, .04); }
+.nav-free-label { font-family: var(--f-body); font-size: 13px; font-weight: 300; color: var(--chrome); }
+.nav-free-desc { font-family: var(--f-mono); font-size: 9.5px; color: var(--dust-dim); margin-top: 3px; letter-spacing: .02em; }
+
+/* ── Mobile Navigation Menu ──────────────────────────────────── */
+.nav-mobile-btn {
+  display: none; font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--dust); border: 1px solid var(--line-strong);
+  padding: 8px 14px; border-radius: 999px; transition: .25s;
+}
+.nav-mobile-btn:hover { color: var(--chrome); border-color: var(--chrome); }
+
+@media (max-width: 940px) {
+  .nav-mobile-btn { display: inline-flex; align-items: center; gap: 6px; }
+}
+
+.nav-mobile-drawer {
+  position: fixed; inset: 0; z-index: 80; background: rgba(5, 5, 7, .96);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  padding: 80px 24px 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+}
+.nav-mobile-close {
+  position: absolute; top: 20px; right: 20px; font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--dust-dim); border: 1px solid var(--line);
+  padding: 8px 14px; border-radius: 999px;
+}
+.nav-mobile-links { display: flex; flex-direction: column; gap: 10px; }
+.nav-mobile-links a {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--dust); padding: 8px 0; border-bottom: 1px solid rgba(232, 234, 240, .05);
+}
+.nav-mobile-links a:hover { color: var(--chrome); }
+
+.nav-mobile-section { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 18px; }
+.nav-mobile-section-title {
+  font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 12px;
+}
+.nav-mobile-free-row {
+  display: flex; flex-direction: column; padding: 12px 14px; background: rgba(16, 16, 24, .6);
+  border: 1px solid var(--line); margin-bottom: 10px; border-radius: 0;
+}
+.nav-mobile-free-row:last-child { margin-bottom: 0; }
+
 .hero { position: relative; min-height: 100svh; display: grid; place-items: center; z-index: 2; padding: 100px 0 60px; }
 .hero-texture {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
